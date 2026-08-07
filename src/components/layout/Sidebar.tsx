@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, ClipboardPlus, History, Users, Settings2 } from 'lucide-react'
+import { LayoutDashboard, ClipboardPlus, History, Users, Settings2, ClipboardList, BarChart3 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
@@ -8,11 +8,13 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/inspecciones/nueva', label: 'Nueva Inspección', icon: ClipboardPlus, end: false },
   { to: '/inspecciones', label: 'Historial', icon: History, end: true },
+  { to: '/estadisticas', label: 'Estadísticas', icon: BarChart3, end: true },
 ]
 
 const NAV_ADMIN = [
   { to: '/admin/usuarios', label: 'Usuarios', icon: Users },
   { to: '/admin/catalogos', label: 'Catálogos', icon: Settings2 },
+  { to: '/admin/encuestas', label: 'Encuestas', icon: ClipboardList },
 ]
 
 function ItemNav({
@@ -35,10 +37,10 @@ function ItemNav({
       onClick={onClick}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all',
           isActive
-            ? 'bg-[var(--cac-azul)] text-white'
-            : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+            ? 'bg-white/15 text-white shadow-relieve-oscuro-hundido'
+            : 'text-white/80 hover:bg-white/10 hover:text-white'
         )
       }
     >
@@ -60,16 +62,20 @@ export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
       )}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-border bg-card transition-transform md:sticky md:top-0 md:h-screen md:translate-x-0',
+          'fondo-sidebar fixed inset-y-0 left-0 z-50 flex w-60 flex-col shadow-[10px_0_30px_-12px_rgba(13,45,107,0.5)] transition-transform md:sticky md:top-0 md:h-screen md:translate-x-0',
           abierto ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="franja-institucional flex items-center justify-center px-4 py-4">
+        <div className="flex flex-col items-center gap-1 border-b border-white/15 px-4 py-5 text-center">
           <img
             src={`${import.meta.env.BASE_URL}images/logo_cacsb_blanc.png`}
             alt="CAC Santa Bárbara"
-            className="h-9"
+            className="h-10"
           />
+          <span className="mt-1.5 text-sm font-bold text-white">Inspecciones SST</span>
+          <span className="text-[10px] uppercase tracking-wider text-white/60">
+            Seguridad y Salud en el Trabajo
+          </span>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
@@ -79,8 +85,8 @@ export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
 
           {perfil?.role === 'admin' && (
             <Accordion type="single" collapsible defaultValue={enAdmin ? 'admin' : undefined} className="pt-1">
-              <AccordionItem value="admin">
-                <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:no-underline">
+              <AccordionItem value="admin" className="border-none">
+                <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:no-underline">
                   Administración
                 </AccordionTrigger>
                 <AccordionContent className="space-y-1 pb-0 pl-2">

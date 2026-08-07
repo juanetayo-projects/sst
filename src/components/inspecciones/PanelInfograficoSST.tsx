@@ -1,34 +1,22 @@
 import { BadgeCheck, ShieldCheck } from "lucide-react";
-import type { CategoriaSST, ColorBloque } from "@/domain/categoriasSST";
-
-const GRADIENTES: Record<ColorBloque, [string, string]> = {
-  rojo: ["#E14B3F", "#A61B12"],
-  azul: ["#16468E", "#0D2D6B"],
-  verde: ["#22B06B", "#0B7A43"],
-  ambar: ["#D9820F", "#8A3F05"],
-  violeta: ["#7C3AED", "#5219A8"],
-  teal: ["#14988E", "#0B5D56"],
-};
+import { GRADIENTES_BLOQUE, type CategoriaSST } from "@/domain/categoriasSST";
 
 export function PanelInfograficoSST({
   categoria,
 }: {
   categoria: CategoriaSST;
 }) {
-  const [desde, hasta] = GRADIENTES[categoria.color];
+  const [desde, hasta] = GRADIENTES_BLOQUE[categoria.color];
+  const Icono = categoria.icono;
 
   return (
     <aside className={`bloque-datos bloque-${categoria.color} overflow-hidden`}>
       <div
-        className="flex flex-col items-center gap-2 px-5 py-6 text-center text-white"
+        className="flex flex-col items-center gap-2.5 px-5 py-6 text-center text-white"
         style={{ background: `linear-gradient(135deg, ${desde}, ${hasta})` }}
       >
-        <div className="flex size-20 items-center justify-center rounded-2xl bg-white/90 p-2 shadow-inner">
-          <img
-            src={`${import.meta.env.BASE_URL}images/iconos-sst/${categoria.icono}`}
-            alt=""
-            className="size-full object-contain"
-          />
+        <div className="flex size-16 items-center justify-center rounded-2xl bg-white/15 shadow-relieve-oscuro-hundido">
+          <Icono className="size-8" strokeWidth={1.75} />
         </div>
         <h3 className="text-sm font-bold uppercase tracking-wide">
           {categoria.nombre}

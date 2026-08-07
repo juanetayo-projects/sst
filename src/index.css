@@ -83,6 +83,23 @@
   --relieve-sm: 3px 3px 8px rgba(13, 45, 107, 0.08), -3px -3px 8px rgba(255, 255, 255, 0.9);
   --relieve-hover: 8px 8px 20px rgba(13, 45, 107, 0.14), -8px -8px 20px rgba(255, 255, 255, 1);
   --hundido: inset 4px 4px 8px rgba(13, 45, 107, 0.08), inset -4px -4px 8px rgba(255, 255, 255, 0.9);
+
+  /* Superficies azules — sidebar, login y cualquier panel sobre el degradado institucional oscuro */
+  --degradado-oscuro: linear-gradient(180deg, #1f56c4 0%, #1a4fa0 45%, #0d2d6b 100%);
+  --superficie-azul-1: #eef3fb;
+  --superficie-azul-2: #d7e3f5;
+  --relieve-oscuro: 7px 7px 16px rgba(4, 14, 40, 0.5), -7px -7px 16px rgba(255, 255, 255, 0.06);
+  --relieve-oscuro-hundido: inset 5px 5px 11px rgba(4, 14, 40, 0.5), inset -5px -5px 11px rgba(255, 255, 255, 0.08);
+
+  /* Tarjetas KPI del dashboard — fondo pastel + chip de ícono con degradado saturado */
+  --kpi-azul-fondo: linear-gradient(145deg, #eef3fb 0%, #d7e3f5 100%);
+  --kpi-azul-icono: linear-gradient(135deg, #2a5cae, #0a2354);
+  --kpi-verde-fondo: linear-gradient(145deg, #eafaf1 0%, #cdf0dd 100%);
+  --kpi-verde-icono: linear-gradient(135deg, #34d399, #047857);
+  --kpi-ambar-fondo: linear-gradient(145deg, #fef6e8 0%, #fbe4b8 100%);
+  --kpi-ambar-icono: linear-gradient(135deg, #fbbf24, #b45309);
+  --kpi-rojo-fondo: linear-gradient(145deg, #fdecea 0%, #f8cbc4 100%);
+  --kpi-rojo-icono: linear-gradient(135deg, #f87171, #b91c1c);
 }
 
 .dark {
@@ -126,6 +143,14 @@
   --tinte-teal-borde: #1a413d;
   --tinte-rojo: #2a1210;
   --tinte-rojo-borde: #4d211d;
+
+  --superficie-azul-1: #16223a;
+  --superficie-azul-2: #1a2740;
+
+  --kpi-azul-fondo: linear-gradient(145deg, #16223a 0%, #1a2740 100%);
+  --kpi-verde-fondo: linear-gradient(145deg, #0d2a1e 0%, #123a29 100%);
+  --kpi-ambar-fondo: linear-gradient(145deg, #2c2410 0%, #3a2f13 100%);
+  --kpi-rojo-fondo: linear-gradient(145deg, #2c1512 0%, #3a1a16 100%);
 
   --relieve: 6px 6px 14px rgba(0, 0, 0, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.03);
   --relieve-sm: 3px 3px 8px rgba(0, 0, 0, 0.4), -3px -3px 8px rgba(255, 255, 255, 0.025);
@@ -185,6 +210,8 @@
   --shadow-relieve-sm: var(--relieve-sm);
   --shadow-relieve-hover: var(--relieve-hover);
   --shadow-hundido: var(--hundido);
+  --shadow-relieve-oscuro: var(--relieve-oscuro);
+  --shadow-relieve-oscuro-hundido: var(--relieve-oscuro-hundido);
 
   --font-sans:
     'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
@@ -253,6 +280,22 @@
 
   .franja-institucional {
     background: linear-gradient(135deg, var(--cac-azul) 0%, var(--cac-azul-contraste) 100%);
+  }
+
+  /* Fondo de página oscuro (login) — degradado institucional de 3 paradas */
+  .fondo-institucional-oscuro {
+    background: linear-gradient(135deg, var(--cac-azul) 0%, var(--cac-azul-contraste) 45%, #081c45 100%);
+  }
+
+  /* Sidebar — mismo degradado, vertical */
+  .fondo-sidebar {
+    background: var(--degradado-oscuro);
+  }
+
+  /* Superficie azul clara — cards sobre fondo oscuro (formulario de login) */
+  .superficie-azul {
+    background: linear-gradient(145deg, var(--superficie-azul-1) 0%, var(--superficie-azul-2) 100%);
+    box-shadow: var(--relieve);
   }
 
   /* Bloques de preguntas por categoría dentro de un formulario de inspección */

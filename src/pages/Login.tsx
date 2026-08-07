@@ -53,29 +53,24 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--background)]">
-      <header className="franja-institucional flex items-center justify-center py-6">
-        <img
-          src={`${import.meta.env.BASE_URL}images/logo_cacsb_blanc.png`}
-          alt="CAC Santa Bárbara"
-          className="h-12"
-        />
-      </header>
+    <div className="fondo-institucional-oscuro flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="mb-6 flex flex-col items-center gap-2 text-center">
+        <div className="inline-flex items-center justify-center rounded-3xl bg-white/10 p-4 shadow-relieve-oscuro">
+          <img
+            src={`${import.meta.env.BASE_URL}images/logo_cacsb_blanc.png`}
+            alt="CAC Santa Bárbara"
+            className="h-14"
+          />
+        </div>
+        <div className="mt-2 flex items-center gap-1.5 text-white">
+          <ShieldCheck className="size-4" />
+          <h1 className="text-sm font-semibold">Sistema de Inspecciones SST</h1>
+        </div>
+        <p className="text-xs text-white/60">Clínica de Alta Complejidad Santa Bárbara</p>
+      </div>
 
-      <main className="flex flex-1 items-center justify-center p-4">
-        <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-lg">
-          <div className="mb-6 flex flex-col items-center gap-2 text-center">
-            <img
-              src={`${import.meta.env.BASE_URL}images/logo_cacsb2.png`}
-              alt="CAC Santa Bárbara"
-              className="h-10"
-            />
-            <div className="flex items-center gap-1.5 text-[var(--cac-azul)]">
-              <ShieldCheck className="size-4" />
-              <h1 className="text-sm font-semibold">Sistema de Inspecciones SST</h1>
-            </div>
-          </div>
-
+      <main className="w-full max-w-sm">
+        <div className="superficie-azul rounded-2xl p-6">
           <form onSubmit={entrar} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Correo electrónico</Label>

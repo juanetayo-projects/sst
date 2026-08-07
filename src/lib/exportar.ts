@@ -7,49 +7,112 @@ function descargar(blob: Blob, archivo: string) {
   URL.revokeObjectURL(url)
 }
 
-export async function exportarExcel(
-  nombre: string,
-  columnas: { header: string; key: string; width?: number }[],
+let logoDataUrlCache: string | null | undefined
+
+/** Logo institucional como data URL — se cachea tras la primera exportación. */
+async function obtenerLogoDataUrl(): Promise<string | null> {
+  if (logoDataUrlCache !== undefined) return logoDataUrlCache
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}images/logo_cacsb2.png`)
+    const blob = await res.blob()
+    logoDataUrlCache = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(new Error('No se pudo leer el logo'))
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    logoDataUrlCache = null
+  }
+  return logoDataUrlCache
+}
+
+export async function exportarExcel(opts: {
+  nombreArchivo: string
+  titulo: string
+  subtitulo?: string
+  columnas: { header: string; key: string; width?: number }[]
   filas: Record<string, unknown>[]
-) {
+}) {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('Datos')
-  ws.columns = columnas.map((c) => ({ header: c.header, key: c.key, width: c.width ?? 18 }))
+  ws.columns = opts.columnas.map((c) => ({ key: c.key, width: c.width ?? 18 }))
 
-  ws.getRow(1).eachCell((cell) => {
+  const logo = await obtenerLogoDataUrl()
+  if (logo) {
+    const base64 = logo.split(',')[1]
+    const imgId = wb.addImage({ base64, extension: 'png' })
+    ws.addImage(imgId, { tl: { col: 0, row: 0 }, ext: { width: 120, height: 40 } })
+  }
+  ws.addRow([])
+  ws.addRow([])
+  ws.addRow([])
+  const filaTitulo = ws.addRow([opts.titulo])
+  filaTitulo.font = { bold: true, size: 14, color: { argb: 'FF0D2D6B' } }
+  if (opts.subtitulo) {
+    const filaSub = ws.addRow([opts.subtitulo])
+    filaSub.font = { italic: true, size: 9, color: { argb: 'FF64748B' } }
+  }
+  ws.addRow([])
+
+  const filaHeader = ws.addRow(opts.columnas.map((c) => c.header))
+  filaHeader.eachCell((cell) => {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D2D6B' } }
     cell.font = { color: { argb: 'FFFFFFFF' }, bold: true }
   })
-  filas.forEach((f) => ws.addRow(f))
+  opts.filas.forEach((f) => ws.addRow(opts.columnas.map((c) => f[c.key])))
 
   const buf = await wb.xlsx.writeBuffer()
-  descargar(new Blob([buf]), `${nombre}.xlsx`)
+  descargar(new Blob([buf]), `${opts.nombreArchivo}.xlsx`)
 }
 
-export async function exportarListaPDF(titulo: string, headers: string[], filas: (string | number)[][]) {
+async function iniciarPdfMake() {
   const pdfMake = (await import('pdfmake/build/pdfmake')).default
   const pdfFonts = await import('pdfmake/build/vfs_fonts')
   const fuentes = pdfFonts as unknown as { pdfMake?: { vfs: unknown }; vfs?: unknown }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(pdfMake as any).vfs = fuentes.pdfMake?.vfs ?? fuentes.vfs
+  return pdfMake
+}
+
+export async function exportarListaPDF(opts: {
+  nombreArchivo: string
+  titulo: string
+  subtitulo?: string
+  columnas: string[]
+  filas: (string | number)[][]
+}) {
+  const pdfMake = await iniciarPdfMake()
+  const logo = await obtenerLogoDataUrl()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const content: any[] = []
+  if (logo) content.push({ image: logo, width: 100, margin: [0, 0, 0, 8] })
+  content.push({ text: opts.titulo, style: 'h' })
+  if (opts.subtitulo) content.push({ text: opts.subtitulo, style: 'sub' })
+  content.push({
+    table: {
+      headerRows: 1,
+      body: [opts.columnas.map((h) => ({ text: h, color: 'white', bold: true })), ...opts.filas],
+    },
+    layout: {
+      fillColor: (rowIndex: number) => (rowIndex === 0 ? '#0D2D6B' : rowIndex % 2 ? '#F1F5F9' : null),
+    },
+    margin: [0, 10, 0, 0],
+  })
 
   pdfMake
     .createPdf({
       pageOrientation: 'landscape',
-      content: [
-        { text: titulo, style: 'h' },
-        {
-          table: { headerRows: 1, body: [headers.map((h) => ({ text: h, color: 'white', bold: true })), ...filas] },
-          layout: {
-            fillColor: (rowIndex: number) => (rowIndex === 0 ? '#0D2D6B' : rowIndex % 2 ? '#F1F5F9' : null),
-          },
-        },
-      ],
-      styles: { h: { fontSize: 14, bold: true, color: '#0D2D6B', margin: [0, 0, 0, 8] } },
+      content,
+      styles: {
+        h: { fontSize: 14, bold: true, color: '#0D2D6B' },
+        sub: { fontSize: 9, italics: true, color: '#64748B', margin: [0, 2, 0, 0] },
+      },
       defaultStyle: { fontSize: 8 },
     })
-    .download(`${titulo}.pdf`)
+    .download(`${opts.nombreArchivo}.pdf`)
 }
 
 export type SeccionPDF = { titulo: string; color: string; filas: [string, string][] }
@@ -61,14 +124,13 @@ export async function exportarInspeccionPDF(datos: {
   secciones: SeccionPDF[]
   cierre: [string, string][]
 }) {
-  const pdfMake = (await import('pdfmake/build/pdfmake')).default
-  const pdfFonts = await import('pdfmake/build/vfs_fonts')
-  const fuentes = pdfFonts as unknown as { pdfMake?: { vfs: unknown }; vfs?: unknown }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(pdfMake as any).vfs = fuentes.pdfMake?.vfs ?? fuentes.vfs
+  const pdfMake = await iniciarPdfMake()
+  const logo = await obtenerLogoDataUrl()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const content: any[] = [{ text: datos.titulo, style: 'h' }]
+  const content: any[] = []
+  if (logo) content.push({ image: logo, width: 90, margin: [0, 0, 0, 8] })
+  content.push({ text: datos.titulo, style: 'h' })
 
   content.push({
     columns: datos.encabezado.map(([label, valor]) => ({

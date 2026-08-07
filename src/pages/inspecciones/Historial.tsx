@@ -94,6 +94,18 @@ export default function Historial() {
     [filas]
   )
 
+  const subtituloFiltros = useMemo(() => {
+    const partes: string[] = []
+    partes.push(`Tipo: ${tipoId === TODOS ? 'Todos' : (tipos.find((t) => t.id === tipoId)?.nombre ?? 'Todos')}`)
+    partes.push(`Empresa: ${empresa === TODOS ? 'Todas' : empresa}`)
+    partes.push(`Sede: ${sede === TODOS ? 'Todas' : sede}`)
+    partes.push(`Estado: ${estado === TODOS ? 'Todos' : estado === 'completada' ? 'Completada' : 'Borrador'}`)
+    if (soloUrgentes) partes.push('Solo urgentes')
+    if (desde) partes.push(`Desde: ${formatearFecha(desde)}`)
+    if (hasta) partes.push(`Hasta: ${formatearFecha(hasta)}`)
+    return partes.join(' · ')
+  }, [tipoId, tipos, empresa, sede, estado, soloUrgentes, desde, hasta])
+
   return (
     <div>
       <PageHeader
@@ -105,9 +117,11 @@ export default function Historial() {
               size="sm"
               disabled={filas.length === 0}
               onClick={() =>
-                exportarExcel(
-                  'historial_inspecciones',
-                  [
+                exportarExcel({
+                  nombreArchivo: 'historial_inspecciones',
+                  titulo: 'Historial de inspecciones',
+                  subtitulo: subtituloFiltros,
+                  columnas: [
                     { header: 'Fecha', key: 'fecha', width: 12 },
                     { header: 'Tipo', key: 'tipo', width: 34 },
                     { header: 'Empresa', key: 'empresa', width: 26 },
@@ -117,8 +131,8 @@ export default function Historial() {
                     { header: 'Estado', key: 'estado', width: 14 },
                     { header: 'Urgente', key: 'urgente', width: 10 },
                   ],
-                  filasExport
-                )
+                  filas: filasExport,
+                })
               }
             >
               <FileSpreadsheet />
@@ -129,11 +143,13 @@ export default function Historial() {
               size="sm"
               disabled={filas.length === 0}
               onClick={() =>
-                exportarListaPDF(
-                  'Historial de inspecciones',
-                  ['Fecha', 'Tipo', 'Empresa', 'Sede', 'Lugar', 'Inspector', 'Estado', 'Urgente'],
-                  filasExport.map((f) => [f.fecha, f.tipo, f.empresa, f.sede, f.lugar, f.inspector, f.estado, f.urgente])
-                )
+                exportarListaPDF({
+                  nombreArchivo: 'Historial de inspecciones',
+                  titulo: 'Historial de inspecciones',
+                  subtitulo: subtituloFiltros,
+                  columnas: ['Fecha', 'Tipo', 'Empresa', 'Sede', 'Lugar', 'Inspector', 'Estado', 'Urgente'],
+                  filas: filasExport.map((f) => [f.fecha, f.tipo, f.empresa, f.sede, f.lugar, f.inspector, f.estado, f.urgente]),
+                })
               }
             >
               <FileDown />

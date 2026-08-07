@@ -14,15 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RespuestaLinea } from "@/components/inspecciones/RespuestaLinea";
 import { PanelInfograficoSST } from "@/components/inspecciones/PanelInfograficoSST";
-import { obtenerCategoriaSST } from "@/domain/categoriasSST";
-
-const COLORES_HEX: Record<string, string> = {
-  azul: "#0D2D6B",
-  verde: "#0F9D58",
-  ambar: "#B45309",
-  violeta: "#6D28D9",
-  teal: "#0F766E",
-};
+import { obtenerCategoriaSST, COLOR_HEX_BLOQUE } from "@/domain/categoriasSST";
 
 type InspeccionDetalle = {
   id: string;
@@ -92,7 +84,7 @@ export default function DetalleInspeccion() {
     );
     const secciones: SeccionPDF[] = categoriasVisibles.map((cat) => ({
       titulo: cat.nombre,
-      color: COLORES_HEX[cat.color] ?? "#0D2D6B",
+      color: COLOR_HEX_BLOQUE[cat.color as keyof typeof COLOR_HEX_BLOQUE] ?? "#0D2D6B",
       filas: (estructura.porCategoria.get(cat.id) ?? [])
         .filter((p) => respuestas[p.id])
         .map((p) => [p.texto, respuestas[p.id]] as [string, string]),

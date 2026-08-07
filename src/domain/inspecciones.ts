@@ -34,6 +34,7 @@ export type Pregunta = {
   opciones: string[] | null
   orden: number
   obligatoria: boolean
+  activa: boolean
 }
 
 export const OPCIONES_RESPUESTA: Record<TipoRespuesta, string[]> = {
@@ -97,6 +98,30 @@ export async function cargarEstructuraInspeccion(codigo: string): Promise<Estruc
     cierre,
     porCategoria,
   }
+}
+
+/** Igual que `cargarEstructuraInspeccion`, pero por id de tipo e incluyendo preguntas inactivas — para el editor admin. */
+export async function cargarEstructuraAdmin(tipoId: string): Promise<Omit<EstructuraInspeccion, 'tipo'>> {
+  const [{ data: categorias, error: errorCat }, { data: preguntas, error: errorPreg }] = await Promise.all([
+    supabase.from('categorias_pregunta').select('*').eq('tipo_inspeccion_id', tipoId).order('orden'),
+    supabase.from('preguntas').select('*').eq('tipo_inspeccion_id', tipoId).order('orden'),
+  ])
+  if (errorCat) throw errorCat
+  if (errorPreg) throw errorPreg
+
+  const todasPreguntas = (preguntas ?? []) as Pregunta[]
+  const encabezado = todasPreguntas.filter((p) => p.categoria_id === null && p.orden < ORDEN_CIERRE)
+  const cierre = todasPreguntas.filter((p) => p.categoria_id === null && p.orden >= ORDEN_CIERRE)
+
+  const porCategoria = new Map<string, Pregunta[]>()
+  for (const p of todasPreguntas) {
+    if (p.categoria_id === null) continue
+    const lista = porCategoria.get(p.categoria_id) ?? []
+    lista.push(p)
+    porCategoria.set(p.categoria_id, lista)
+  }
+
+  return { categorias: (categorias ?? []) as CategoriaPregunta[], encabezado, cierre, porCategoria }
 }
 
 /** Una categoría condicional solo se muestra si la pregunta de encabezado que la controla tiene ese valor exacto. */

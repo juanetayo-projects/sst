@@ -9,8 +9,11 @@ import SeleccionarTipoInspeccion from '@/pages/inspecciones/SeleccionarTipoInspe
 import FormularioInspeccion from '@/pages/inspecciones/FormularioInspeccion'
 import Historial from '@/pages/inspecciones/Historial'
 import DetalleInspeccion from '@/pages/inspecciones/DetalleInspeccion'
+import Estadisticas from '@/pages/Estadisticas'
 import Usuarios from '@/pages/admin/Usuarios'
 import Catalogos from '@/pages/admin/Catalogos'
+import GestionEncuestas from '@/pages/admin/GestionEncuestas'
+import EditorEncuesta from '@/pages/admin/EditorEncuesta'
 
 export default function App() {
   return (
@@ -29,6 +32,7 @@ export default function App() {
           >
             <Route index element={<DashboardPage />} />
             <Route path="inspecciones" element={<Historial />} />
+            <Route path="estadisticas" element={<Estadisticas />} />
             <Route path="inspecciones/nueva" element={<SeleccionarTipoInspeccion />} />
             <Route path="inspecciones/nueva/:codigo" element={<FormularioInspeccion />} />
             <Route path="inspecciones/:id" element={<DetalleInspeccion />} />
@@ -45,6 +49,22 @@ export default function App() {
               element={
                 <ProtectedRoute soloAdmin>
                   <Catalogos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/encuestas"
+              element={
+                <ProtectedRoute soloAdmin>
+                  <GestionEncuestas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/encuestas/:codigo"
+              element={
+                <ProtectedRoute soloAdmin>
+                  <EditorEncuesta />
                 </ProtectedRoute>
               }
             />

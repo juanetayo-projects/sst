@@ -1,26 +1,48 @@
 import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Card de métrica con degradado institucional — para filas de KPI en dashboards. */
+export type ColorKpi = "azul" | "verde" | "ambar" | "rojo";
+
+const TEXTO_KPI: Record<ColorKpi, string> = {
+  azul: "text-[var(--cac-azul-800)]",
+  verde: "text-[#065f46]",
+  ambar: "text-[#92400e]",
+  rojo: "text-[#991b1b]",
+};
+
+/** Tarjeta KPI neumórfica — fondo pastel por color + chip de ícono con degradado saturado. */
 export function MetricCard({
   titulo,
   valor,
-  icono,
+  icono: Icono,
   sub,
+  color = "azul",
 }: {
   titulo: string;
   valor: ReactNode;
-  icono?: ReactNode;
+  icono?: LucideIcon;
   sub?: string;
+  color?: ColorKpi;
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--cac-azul-800)]/40 bg-gradient-to-br from-[var(--cac-azul)] to-[var(--cac-azul-contraste)] p-5 text-white shadow-[0_10px_30px_-8px_rgba(13,45,107,0.55)] transition-shadow hover:shadow-[0_14px_36px_-6px_rgba(13,45,107,0.6)]">
-      <div className="flex items-center justify-between">
-        <span className="text-sm/5 opacity-80">{titulo}</span>
-        {icono}
+    <div
+      className="flex items-center gap-3.5 rounded-2xl p-4 shadow-relieve transition-all hover:-translate-y-0.5 hover:shadow-relieve-hover"
+      style={{ backgroundImage: `var(--kpi-${color}-fondo)` }}
+    >
+      {Icono && (
+        <div
+          className="flex size-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-relieve-sm"
+          style={{ backgroundImage: `var(--kpi-${color}-icono)` }}
+        >
+          <Icono className="size-5" />
+        </div>
+      )}
+      <div className="min-w-0">
+        <div className={cn("text-2xl font-extrabold tabular leading-tight", TEXTO_KPI[color])}>{valor}</div>
+        <div className="text-xs font-semibold text-muted-foreground">{titulo}</div>
+        {sub && <div className="text-[10px] text-muted-foreground/80">{sub}</div>}
       </div>
-      <div className="mt-2 text-3xl font-bold tabular">{valor}</div>
-      {sub && <div className="mt-1 text-xs opacity-75">{sub}</div>}
     </div>
   );
 }
