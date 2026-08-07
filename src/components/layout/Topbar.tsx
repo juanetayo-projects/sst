@@ -15,7 +15,7 @@ export function Topbar({ onAbrirMenu }: { onAbrirMenu: () => void }) {
   const { perfil } = useAuth()
 
   return (
-    <header className="franja-institucional sticky top-0 z-30 flex items-center justify-between px-4 py-3 shadow-[0_4px_14px_-4px_rgba(13,45,107,0.45)]">
+    <header className="fondo-sidebar sticky top-0 z-30 flex items-center justify-between px-4 py-3 shadow-[0_4px_14px_-4px_rgba(13,45,107,0.45)]">
       <button
         type="button"
         onClick={onAbrirMenu}
