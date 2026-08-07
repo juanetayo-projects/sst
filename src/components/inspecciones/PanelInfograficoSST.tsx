@@ -15,7 +15,6 @@ export function PanelInfograficoSST({
 }: {
   categoria: CategoriaSST;
 }) {
-  const Icono = categoria.icono;
   const [desde, hasta] = GRADIENTES[categoria.color];
 
   return (
@@ -24,8 +23,12 @@ export function PanelInfograficoSST({
         className="flex flex-col items-center gap-2 px-5 py-6 text-center text-white"
         style={{ background: `linear-gradient(135deg, ${desde}, ${hasta})` }}
       >
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-white/20 shadow-inner">
-          <Icono className="size-7" />
+        <div className="flex size-20 items-center justify-center rounded-2xl bg-white/90 p-2 shadow-inner">
+          <img
+            src={`${import.meta.env.BASE_URL}images/iconos-sst/${categoria.icono}`}
+            alt=""
+            className="size-full object-contain"
+          />
         </div>
         <h3 className="text-sm font-bold uppercase tracking-wide">
           {categoria.nombre}
