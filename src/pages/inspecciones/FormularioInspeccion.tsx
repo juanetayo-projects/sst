@@ -296,43 +296,40 @@ export default function FormularioInspeccion() {
                   onChange={(e) => setFecha(e.target.value)}
                 />
               </div>
+              {estructura.encabezado.map((p) => (
+                <CampoDinamico
+                  key={p.id}
+                  pregunta={p}
+                  tipoRespuesta={estructura.tipo.tipo_respuesta}
+                  valor={respuestas[p.id] ?? ""}
+                  onChange={(v) => cambiarRespuesta(p.id, v)}
+                  invalido={faltantes.has(p.id)}
+                />
+              ))}
             </CardContent>
           </Card>
 
-          {estructura.encabezado.length > 0 && (
-            <Card>
-              <CardContent className="p-4">
-                {estructura.encabezado.map((p) => (
-                  <CampoDinamico
-                    key={p.id}
-                    pregunta={p}
-                    tipoRespuesta={estructura.tipo.tipo_respuesta}
-                    valor={respuestas[p.id] ?? ""}
-                    onChange={(v) => cambiarRespuesta(p.id, v)}
-                    invalido={faltantes.has(p.id)}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {categoriasVisibles.map((cat, i) => (
-            <BloqueCategoria
-              key={cat.id}
-              categoria={cat}
-              numero={i + 1}
-              preguntas={estructura.porCategoria.get(cat.id) ?? []}
-              tipoRespuesta={estructura.tipo.tipo_respuesta}
-              respuestas={respuestas}
-              faltantes={faltantes}
-              onCambiar={cambiarRespuesta}
-            />
-          ))}
+          {categoriasVisibles.map((cat, i) => {
+            const siguienteSeccion = secciones[i + 1];
+            return (
+              <BloqueCategoria
+                key={cat.id}
+                categoria={cat}
+                numero={i + 1}
+                preguntas={estructura.porCategoria.get(cat.id) ?? []}
+                tipoRespuesta={estructura.tipo.tipo_respuesta}
+                respuestas={respuestas}
+                faltantes={faltantes}
+                onCambiar={cambiarRespuesta}
+                siguiente={siguienteSeccion ? { id: siguienteSeccion.id, nombre: siguienteSeccion.nombre } : null}
+              />
+            );
+          })}
 
           {estructura.cierre.length > 0 && (
             <Card id="cierre" className="scroll-mt-28">
-              <CardContent className="p-4">
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <CardContent className="grid grid-cols-1 gap-x-6 p-4 md:grid-cols-2">
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:col-span-2">
                   Cierre de la inspección
                 </div>
                 {estructura.cierre.map((p) => (

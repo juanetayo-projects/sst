@@ -215,7 +215,7 @@ export default function DetalleInspeccion() {
 
           {estructura.encabezado.filter((p) => respuestas[p.id]).length > 0 && (
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="grid grid-cols-1 gap-x-6 p-4 md:grid-cols-2">
                 {estructura.encabezado.map((p) => (
                   <RespuestaLinea
                     key={p.id}
@@ -242,13 +242,15 @@ export default function DetalleInspeccion() {
                 </span>
                 {cat.nombre}
               </div>
-              {(estructura.porCategoria.get(cat.id) ?? []).map((p) => (
-                <RespuestaLinea
-                  key={p.id}
-                  pregunta={p}
-                  valor={respuestas[p.id]}
-                />
-              ))}
+              <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
+                {(estructura.porCategoria.get(cat.id) ?? []).map((p) => (
+                  <RespuestaLinea
+                    key={p.id}
+                    pregunta={p}
+                    valor={respuestas[p.id]}
+                  />
+                ))}
+              </div>
             </div>
           ))}
 

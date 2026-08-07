@@ -6,6 +6,11 @@ export type Seccion = {
   color: ColorBloque
 }
 
+/** Desplazamiento suave por id — nunca usar `<a href="#id">` aquí: la app usa HashRouter y cambiar location.hash rompe el enrutamiento. */
+export function irASeccion(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 export function NavSecciones({ secciones }: { secciones: Seccion[] }) {
   if (secciones.length < 2) return null
 
@@ -15,9 +20,10 @@ export function NavSecciones({ secciones }: { secciones: Seccion[] }) {
       className="sticky top-[52px] z-10 -mx-1 flex gap-1.5 overflow-x-auto rounded-xl border border-border bg-card/95 p-1.5 shadow-relieve-sm backdrop-blur"
     >
       {secciones.map((s, i) => (
-        <a
+        <button
           key={s.id}
-          href={`#${s.id}`}
+          type="button"
+          onClick={() => irASeccion(s.id)}
           className={`bloque-${s.color} flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors hover:brightness-95`}
           style={{
             backgroundColor: 'var(--bloque-fondo)',
@@ -32,7 +38,7 @@ export function NavSecciones({ secciones }: { secciones: Seccion[] }) {
             {i + 1}
           </span>
           {s.nombre}
-        </a>
+        </button>
       ))}
     </nav>
   )
