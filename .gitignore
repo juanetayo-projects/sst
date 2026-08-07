@@ -1,0 +1,46 @@
+# Dependencias
+node_modules/
+.pnp/
+.pnp.js
+
+# Build
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# Entorno — NUNCA subir claves
+.env
+.env.*
+!.env.example
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos temporales de Office (bloqueo al abrir un xlsx)
+~$*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Insumos con datos reales (planillas Excel de origen, capturas) — no van al repo.
+# Anclados a la raíz (con "/" inicial) para NO excluir public/images/, que sí
+# necesita el build (logos, favicon).
+/docs/
+/images/
