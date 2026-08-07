@@ -24,8 +24,9 @@ import {
 import { MensajeDialog, type Mensaje } from "@/components/ui/mensaje-dialog";
 import { CampoDinamico } from "@/components/inspecciones/CampoDinamico";
 import { BloqueCategoria } from "@/components/inspecciones/BloqueCategoria";
+import { NavSecciones, type Seccion } from "@/components/inspecciones/NavSecciones";
 import { PanelInfograficoSST } from "@/components/inspecciones/PanelInfograficoSST";
-import { obtenerCategoriaSST } from "@/domain/categoriasSST";
+import { obtenerCategoriaSST, type ColorBloque } from "@/domain/categoriasSST";
 
 export default function FormularioInspeccion() {
   const { codigo } = useParams<{ codigo: string }>();
@@ -207,6 +208,10 @@ export default function FormularioInspeccion() {
     categoriaEsVisible(c, estructura.encabezado, respuestas),
   );
   const categoriaSST = obtenerCategoriaSST(estructura.tipo.codigo);
+  const secciones: Seccion[] = [
+    ...categoriasVisibles.map((c) => ({ id: `categoria-${c.id}`, nombre: c.nombre, color: c.color as ColorBloque })),
+    ...(estructura.cierre.length > 0 ? [{ id: "cierre", nombre: "Cierre", color: "azul" as ColorBloque }] : []),
+  ];
 
   return (
     <div className="mx-auto max-w-6xl pb-10">
@@ -228,6 +233,8 @@ export default function FormularioInspeccion() {
               {estructura.tipo.nombre}
             </h1>
           </div>
+
+          <NavSecciones secciones={secciones} />
 
           <Card>
             <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 md:grid-cols-4">
@@ -309,10 +316,11 @@ export default function FormularioInspeccion() {
             </Card>
           )}
 
-          {categoriasVisibles.map((cat) => (
+          {categoriasVisibles.map((cat, i) => (
             <BloqueCategoria
               key={cat.id}
               categoria={cat}
+              numero={i + 1}
               preguntas={estructura.porCategoria.get(cat.id) ?? []}
               tipoRespuesta={estructura.tipo.tipo_respuesta}
               respuestas={respuestas}
@@ -322,7 +330,7 @@ export default function FormularioInspeccion() {
           ))}
 
           {estructura.cierre.length > 0 && (
-            <Card>
+            <Card id="cierre" className="scroll-mt-28">
               <CardContent className="p-4">
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Cierre de la inspección

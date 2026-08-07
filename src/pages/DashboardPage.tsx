@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ClipboardPlus, CalendarClock, FileClock, CheckCircle2, TriangleAlert, Eye } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { formatearFecha } from '@/lib/utils'
@@ -105,18 +105,22 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={porTipo} layout="vertical" margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
+                  <BarChart data={porTipo} layout="vertical" margin={{ left: 0, right: 28, top: 4, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
                     <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="nombre" width={130} tick={{ fontSize: 10.5 }} />
                     <Tooltip
                       contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }}
-                      formatter={(v: number) => [v, 'Inspecciones']}
+                      formatter={(v: number) => {
+                        const total = porTipo.reduce((acc, t) => acc + t.total, 0)
+                        return [`${v} (${total > 0 ? Math.round((v / total) * 100) : 0}% del total)`, 'Inspecciones']
+                      }}
                     />
                     <Bar dataKey="total" radius={[0, 6, 6, 0]}>
                       {porTipo.map((t) => (
                         <Cell key={t.codigo} fill={COLOR_HEX_BLOQUE[obtenerCategoriaSST(t.codigo)?.color ?? 'azul']} />
                       ))}
+                      <LabelList dataKey="total" position="right" style={{ fontSize: 11, fontWeight: 600, fill: 'var(--foreground)' }} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>

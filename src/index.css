@@ -53,7 +53,7 @@
   --tinte-rojo-borde: #f5d5d2;
 
   /* Superficies */
-  --background: #f4f6fb;
+  --background: #dde5f3;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -232,8 +232,7 @@
     text-rendering: optimizeLegibility;
   }
 
-  html,
-  body {
+  html {
     overflow-x: hidden;
   }
 

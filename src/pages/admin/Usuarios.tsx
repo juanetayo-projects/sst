@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { MensajeDialog, type Mensaje } from '@/components/ui/mensaje-dialog'
 import { SkeletonTabla } from '@/components/ui/skeleton'
+import { PasswordStrengthMeter, CampoConfirmarPassword } from '@/components/ui/password-strength'
 
 type Perfil = {
   id: string
@@ -30,12 +31,14 @@ export default function Usuarios() {
   const [modalNuevo, setModalNuevo] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmarPassword, setConfirmarPassword] = useState('')
   const [nombreCompleto, setNombreCompleto] = useState('')
   const [role, setRole] = useState<'admin' | 'inspector'>('inspector')
   const [creando, setCreando] = useState(false)
 
   const [reseteando, setReseteando] = useState<Perfil | null>(null)
   const [nuevaPassword, setNuevaPassword] = useState('')
+  const [confirmarNuevaPassword, setConfirmarNuevaPassword] = useState('')
   const [guardandoReset, setGuardandoReset] = useState(false)
 
   const [aEliminar, setAEliminar] = useState<Perfil | null>(null)
@@ -59,6 +62,10 @@ export default function Usuarios() {
 
   async function crearUsuario(e: FormEvent) {
     e.preventDefault()
+    if (password !== confirmarPassword) {
+      setMensaje({ tipo: 'error', titulo: 'Las contraseñas no coinciden', texto: 'Verifica ambos campos.' })
+      return
+    }
     setCreando(true)
     const { error } = await supabase.functions.invoke('admin-usuarios', {
       body: { accion: 'crear', email, password, nombre_completo: nombreCompleto, role },
@@ -71,6 +78,7 @@ export default function Usuarios() {
     setModalNuevo(false)
     setEmail('')
     setPassword('')
+    setConfirmarPassword('')
     setNombreCompleto('')
     setRole('inspector')
     setMensaje({ tipo: 'exito', titulo: 'Usuario creado', texto: `${nombreCompleto} ya puede iniciar sesión.` })
@@ -91,6 +99,10 @@ export default function Usuarios() {
   async function resetearPassword(e: FormEvent) {
     e.preventDefault()
     if (!reseteando) return
+    if (nuevaPassword !== confirmarNuevaPassword) {
+      setMensaje({ tipo: 'error', titulo: 'Las contraseñas no coinciden', texto: 'Verifica ambos campos.' })
+      return
+    }
     setGuardandoReset(true)
     const { error } = await supabase.functions.invoke('admin-usuarios', {
       body: { accion: 'reset', id: reseteando.id, password: nuevaPassword },
@@ -102,6 +114,7 @@ export default function Usuarios() {
     }
     setReseteando(null)
     setNuevaPassword('')
+    setConfirmarNuevaPassword('')
     setMensaje({ tipo: 'exito', titulo: 'Contraseña actualizada', texto: 'La nueva contraseña ya está activa.' })
   }
 
@@ -237,6 +250,19 @@ export default function Usuarios() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <PasswordStrengthMeter password={password} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="nuevo-password-confirmar">Confirmar contraseña</Label>
+                <Input
+                  id="nuevo-password-confirmar"
+                  type="text"
+                  required
+                  minLength={8}
+                  value={confirmarPassword}
+                  onChange={(e) => setConfirmarPassword(e.target.value)}
+                />
+                <CampoConfirmarPassword password={password} confirmar={confirmarPassword} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="nuevo-role">Rol</Label>
@@ -250,7 +276,15 @@ export default function Usuarios() {
               </div>
             </div>
             <DialogFooter className="mt-5">
-              <Button type="button" variant="outline" onClick={() => setModalNuevo(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setModalNuevo(false)
+                  setPassword('')
+                  setConfirmarPassword('')
+                }}
+              >
                 Cancelar
               </Button>
               <Button type="submit" cargando={creando}>
@@ -261,7 +295,16 @@ export default function Usuarios() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={reseteando !== null} onOpenChange={(v) => !v && setReseteando(null)}>
+      <Dialog
+        open={reseteando !== null}
+        onOpenChange={(v) => {
+          if (!v) {
+            setReseteando(null)
+            setNuevaPassword('')
+            setConfirmarNuevaPassword('')
+          }
+        }}
+      >
         <DialogContent className="max-w-sm">
           <form onSubmit={resetearPassword}>
             <DialogHeader>
@@ -278,9 +321,30 @@ export default function Usuarios() {
                 value={nuevaPassword}
                 onChange={(e) => setNuevaPassword(e.target.value)}
               />
+              <PasswordStrengthMeter password={nuevaPassword} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password-reset-confirmar">Confirmar contraseña</Label>
+              <Input
+                id="password-reset-confirmar"
+                type="text"
+                required
+                minLength={8}
+                value={confirmarNuevaPassword}
+                onChange={(e) => setConfirmarNuevaPassword(e.target.value)}
+              />
+              <CampoConfirmarPassword password={nuevaPassword} confirmar={confirmarNuevaPassword} />
             </div>
             <DialogFooter className="mt-5">
-              <Button type="button" variant="outline" onClick={() => setReseteando(null)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setReseteando(null)
+                  setNuevaPassword('')
+                  setConfirmarNuevaPassword('')
+                }}
+              >
                 Cancelar
               </Button>
               <Button type="submit" cargando={guardandoReset}>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MensajeDialog, type Mensaje } from '@/components/ui/mensaje-dialog'
+import { PasswordStrengthMeter, CampoConfirmarPassword } from '@/components/ui/password-strength'
 
 export default function ResetPassword() {
   const navigate = useNavigate()
@@ -63,6 +64,7 @@ export default function ResetPassword() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <PasswordStrengthMeter password={password} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confirmar">Confirmar contraseña</Label>
@@ -75,6 +77,7 @@ export default function ResetPassword() {
                 value={confirmar}
                 onChange={(e) => setConfirmar(e.target.value)}
               />
+              <CampoConfirmarPassword password={password} confirmar={confirmar} />
             </div>
             <Button type="submit" cargando={guardando} className="w-full">
               Guardar contraseña

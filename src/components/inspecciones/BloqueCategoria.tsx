@@ -3,6 +3,7 @@ import type { CategoriaPregunta, Pregunta, TipoRespuesta } from '@/domain/inspec
 
 export function BloqueCategoria({
   categoria,
+  numero,
   preguntas,
   tipoRespuesta,
   respuestas,
@@ -10,6 +11,7 @@ export function BloqueCategoria({
   onCambiar,
 }: {
   categoria: CategoriaPregunta
+  numero?: number
   preguntas: Pregunta[]
   tipoRespuesta: TipoRespuesta
   respuestas: Record<string, string>
@@ -17,8 +19,18 @@ export function BloqueCategoria({
   onCambiar: (preguntaId: string, valor: string) => void
 }) {
   return (
-    <div className={`bloque-datos bloque-${categoria.color} p-4`}>
-      <div className="bloque-titulo mb-2">{categoria.nombre}</div>
+    <div id={`categoria-${categoria.id}`} className={`bloque-datos bloque-${categoria.color} scroll-mt-28 p-4`}>
+      <div className="bloque-titulo mb-2 flex items-center gap-1.5">
+        {numero !== undefined && (
+          <span
+            className="flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+            style={{ backgroundColor: 'var(--bloque-acento)' }}
+          >
+            {numero}
+          </span>
+        )}
+        {categoria.nombre}
+      </div>
       <div>
         {preguntas.map((p) => (
           <CampoDinamico

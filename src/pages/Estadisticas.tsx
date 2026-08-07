@@ -16,6 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import type { TipoInspeccion } from '@/domain/inspecciones'
@@ -136,6 +137,8 @@ export default function Estadisticas() {
       .map(([empresa, total]) => ({ empresa, total }))
       .sort((a, b) => b.total - a.total)
   }, [filas])
+
+  const totalFilas = filas.length
 
   const tablaPorTipoYEstado = useMemo(() => {
     const filasTabla = tipos.map((t) => {
@@ -282,15 +285,22 @@ export default function Estadisticas() {
               <Card>
                 <CardContent className="p-4">
                   <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={porTipo} layout="vertical" margin={{ left: 0, right: 16, top: 4, bottom: 4 }}>
+                    <BarChart data={porTipo} layout="vertical" margin={{ left: 0, right: 28, top: 4, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
                       <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                       <YAxis type="category" dataKey="nombre" width={130} tick={{ fontSize: 10.5 }} />
-                      <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                      <Tooltip
+                        contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }}
+                        formatter={(v: number) => [
+                          `${v} (${totalFilas > 0 ? Math.round((v / totalFilas) * 100) : 0}% del total)`,
+                          'Inspecciones',
+                        ]}
+                      />
                       <Bar dataKey="total" name="Inspecciones" radius={[0, 6, 6, 0]}>
                         {porTipo.map((t) => (
                           <Cell key={t.codigo} fill={COLOR_HEX_BLOQUE[obtenerCategoriaSST(t.codigo)?.color ?? 'azul']} />
                         ))}
+                        <LabelList dataKey="total" position="right" style={{ fontSize: 11, fontWeight: 600, fill: 'var(--foreground)' }} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
@@ -304,12 +314,26 @@ export default function Estadisticas() {
                 <CardContent className="p-4">
                   <ResponsiveContainer width="100%" height={280}>
                     <PieChart>
-                      <Pie data={porEmpresa} dataKey="total" nameKey="empresa" outerRadius={95} label={{ fontSize: 11 }}>
+                      <Pie
+                        data={porEmpresa}
+                        dataKey="total"
+                        nameKey="empresa"
+                        outerRadius={95}
+                        label={({ name, value }) => `${name}: ${value}`}
+                        labelLine={{ stroke: 'var(--muted-foreground)', strokeWidth: 1 }}
+                        style={{ fontSize: 11 }}
+                      >
                         {porEmpresa.map((_, i) => (
                           <Cell key={i} fill={PALETA_PIE[i % PALETA_PIE.length]} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                      <Tooltip
+                        contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }}
+                        formatter={(v: number, name: string) => [
+                          `${v} (${totalFilas > 0 ? Math.round((v / totalFilas) * 100) : 0}% del total)`,
+                          name,
+                        ]}
+                      />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -323,11 +347,15 @@ export default function Estadisticas() {
             <Card>
               <CardContent className="p-4">
                 <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={porMes} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
+                  <LineChart data={porMes} margin={{ left: 0, right: 16, top: 20, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                    <Tooltip
+                      contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }}
+                      formatter={(v: number) => [v, 'Inspecciones']}
+                      labelFormatter={(label: string) => `Mes: ${label}`}
+                    />
                     <Line
                       type="monotone"
                       dataKey="total"
@@ -335,7 +363,14 @@ export default function Estadisticas() {
                       stroke="var(--cac-azul)"
                       strokeWidth={2.5}
                       dot={{ r: 3 }}
-                    />
+                      activeDot={{ r: 5 }}
+                    >
+                      <LabelList
+                        dataKey="total"
+                        position="top"
+                        style={{ fontSize: 11, fontWeight: 600, fill: 'var(--cac-azul)' }}
+                      />
+                    </Line>
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>

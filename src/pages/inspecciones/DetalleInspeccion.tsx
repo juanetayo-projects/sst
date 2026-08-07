@@ -13,8 +13,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RespuestaLinea } from "@/components/inspecciones/RespuestaLinea";
+import { NavSecciones, type Seccion } from "@/components/inspecciones/NavSecciones";
 import { PanelInfograficoSST } from "@/components/inspecciones/PanelInfograficoSST";
-import { obtenerCategoriaSST, COLOR_HEX_BLOQUE } from "@/domain/categoriasSST";
+import { obtenerCategoriaSST, COLOR_HEX_BLOQUE, type ColorBloque } from "@/domain/categoriasSST";
 
 type InspeccionDetalle = {
   id: string;
@@ -130,6 +131,12 @@ export default function DetalleInspeccion() {
     categoriaEsVisible(c, estructura.encabezado, respuestas),
   );
   const categoriaSST = obtenerCategoriaSST(estructura.tipo.codigo);
+  const secciones: Seccion[] = [
+    ...categoriasVisibles.map((c) => ({ id: `categoria-${c.id}`, nombre: c.nombre, color: c.color as ColorBloque })),
+    ...(inspeccion.fortalezas || inspeccion.hallazgos || inspeccion.responsable || inspeccion.urgente
+      ? [{ id: "cierre", nombre: "Cierre", color: "azul" as ColorBloque }]
+      : []),
+  ];
 
   return (
     <div className="mx-auto max-w-6xl pb-10">
@@ -162,6 +169,8 @@ export default function DetalleInspeccion() {
               Exportar PDF
             </Button>
           </div>
+
+          <NavSecciones secciones={secciones} />
 
           <Card>
             <CardContent className="grid grid-cols-2 gap-3 p-4 text-sm sm:grid-cols-4">
@@ -218,12 +227,21 @@ export default function DetalleInspeccion() {
             </Card>
           )}
 
-          {categoriasVisibles.map((cat) => (
+          {categoriasVisibles.map((cat, i) => (
             <div
               key={cat.id}
-              className={`bloque-datos bloque-${cat.color} p-4`}
+              id={`categoria-${cat.id}`}
+              className={`bloque-datos bloque-${cat.color} scroll-mt-28 p-4`}
             >
-              <div className="bloque-titulo mb-2">{cat.nombre}</div>
+              <div className="bloque-titulo mb-2 flex items-center gap-1.5">
+                <span
+                  className="flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                  style={{ backgroundColor: "var(--bloque-acento)" }}
+                >
+                  {i + 1}
+                </span>
+                {cat.nombre}
+              </div>
               {(estructura.porCategoria.get(cat.id) ?? []).map((p) => (
                 <RespuestaLinea
                   key={p.id}
@@ -238,7 +256,7 @@ export default function DetalleInspeccion() {
             inspeccion.hallazgos ||
             inspeccion.responsable ||
             inspeccion.urgente) && (
-            <Card>
+            <Card id="cierre" className="scroll-mt-28">
               <CardContent className="p-4">
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Cierre de la inspección
