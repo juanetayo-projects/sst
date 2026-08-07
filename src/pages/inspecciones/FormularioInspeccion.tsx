@@ -215,7 +215,7 @@ export default function FormularioInspeccion() {
 
   return (
     <div className="mx-auto max-w-6xl pb-10">
-      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:items-start lg:gap-6">
+      <div className="lg:grid lg:grid-cols-[1fr_400px] lg:items-start lg:gap-6">
         {categoriaSST && (
           <div className="order-first mb-4 lg:sticky lg:top-20 lg:order-last lg:mb-0">
             <PanelInfograficoSST categoria={categoriaSST} />

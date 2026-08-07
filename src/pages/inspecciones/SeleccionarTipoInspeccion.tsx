@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { TipoInspeccion } from '@/domain/inspecciones'
-import { CATEGORIAS_SST, GRADIENTES_BLOQUE, obtenerCategoriaSST, type CategoriaSST } from '@/domain/categoriasSST'
+import { CATEGORIAS_SST, COLOR_HEX_BLOQUE, obtenerCategoriaSST, type CategoriaSST } from '@/domain/categoriasSST'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -46,7 +46,7 @@ const REFERENCIA_TIPO: Record<string, string> = {
   andamios: 'Montaje, estabilidad y certificación.',
 }
 
-function TarjetaBanda({
+function TarjetaSeleccion({
   color,
   icono: Icono,
   titulo,
@@ -59,19 +59,21 @@ function TarjetaBanda({
   subtitulo?: string
   onClick: () => void
 }) {
-  const [desde, hasta] = GRADIENTES_BLOQUE[color]
+  const acento = COLOR_HEX_BLOQUE[color]
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex h-full min-w-0 flex-col items-center gap-2 rounded-2xl p-3.5 text-center text-white shadow-relieve-sm transition-all hover:-translate-y-0.5 hover:shadow-relieve sm:p-4"
-      style={{ background: `linear-gradient(145deg, ${desde}, ${hasta})` }}
+      className={`bloque-${color} group flex h-full min-w-0 flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-5`}
     >
-      <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15 shadow-relieve-oscuro-hundido transition-transform group-hover:scale-105 sm:size-12">
-        <Icono className="size-5 sm:size-6" strokeWidth={1.75} />
+      <div
+        className="flex size-12 shrink-0 items-center justify-center rounded-full transition-transform group-hover:scale-105 sm:size-14"
+        style={{ backgroundColor: 'var(--bloque-fondo)' }}
+      >
+        <Icono className="size-6 sm:size-7" style={{ color: acento }} strokeWidth={1.75} />
       </div>
-      <span className="text-[11px] font-bold uppercase leading-tight tracking-wide sm:text-xs">{titulo}</span>
-      {subtitulo && <p className="hidden text-[11px] leading-snug text-white/85 sm:block">{subtitulo}</p>}
+      <span className="text-xs font-semibold leading-snug sm:text-sm">{titulo}</span>
+      {subtitulo && <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">{subtitulo}</p>}
     </button>
   )
 }
@@ -150,7 +152,7 @@ export default function SeleccionarTipoInspeccion() {
           ) : grupoActivo ? (
             <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
               {grupoActivo.tipos.map((tipo) => (
-                <TarjetaBanda
+                <TarjetaSeleccion
                   key={tipo.id}
                   color={grupoActivo.categoria.color}
                   icono={ICONOS[tipo.codigo] ?? ShieldAlert}
@@ -163,12 +165,12 @@ export default function SeleccionarTipoInspeccion() {
           ) : (
             <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
               {grupos.map((grupo) => (
-                <TarjetaBanda
+                <TarjetaSeleccion
                   key={grupo.categoria.id}
                   color={grupo.categoria.color}
                   icono={grupo.categoria.icono}
                   titulo={grupo.categoria.nombre}
-                  subtitulo={grupo.categoria.frecuencia}
+                  subtitulo={grupo.categoria.objetivo}
                   onClick={() => elegirCategoria(grupo)}
                 />
               ))}
