@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutDashboard, ClipboardPlus, History, Users, Settings2, ClipboardList, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, ClipboardPlus, History, Users, Settings2, ClipboardList, BarChart3, Gauge } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { to: '/inspecciones/nueva', label: 'Nueva Inspección', icon: ClipboardPlus, end: false },
   { to: '/inspecciones', label: 'Historial', icon: History, end: true },
   { to: '/estadisticas', label: 'Estadísticas', icon: BarChart3, end: true },
+  { to: '/informe-ejecutivo', label: 'Informe Ejecutivo', icon: Gauge, end: true },
 ]
 
 const NAV_ADMIN = [
