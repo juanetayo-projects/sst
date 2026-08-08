@@ -70,11 +70,11 @@ function TarjetaSeleccion({
     <button
       type="button"
       onClick={onClick}
-      className={`bloque-${color} group flex min-w-0 flex-col items-center gap-2 rounded-xl border border-border bg-card text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${grande ? 'p-4 sm:p-5' : 'p-3 sm:p-4'}`}
+      className={`bloque-${color} group flex min-w-0 flex-col items-center gap-2 rounded-xl border-2 bg-[var(--bloque-fondo)] text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${grande ? 'p-4 sm:p-5' : 'p-3 sm:p-4'}`}
+      style={{ borderColor: 'var(--bloque-borde)' }}
     >
       <div
-        className={`flex shrink-0 items-center justify-center rounded-full transition-transform group-hover:scale-105 ${grande ? 'size-16 sm:size-20' : 'size-12 sm:size-14'}`}
-        style={{ backgroundColor: 'var(--bloque-fondo)' }}
+        className={`flex shrink-0 items-center justify-center rounded-full bg-[var(--card)] shadow-sm transition-transform group-hover:scale-105 ${grande ? 'size-16 sm:size-20' : 'size-12 sm:size-14'}`}
       >
         {imagenIcono ? (
           <img src={imagenIcono} alt="" className={grande ? 'size-10 object-contain sm:size-12' : 'size-8 object-contain sm:size-9'} />
