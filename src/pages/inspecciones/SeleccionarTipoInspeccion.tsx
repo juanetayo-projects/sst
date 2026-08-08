@@ -73,7 +73,7 @@ function TarjetaSeleccion({
     >
       {/* Panel del icono: caja enmarcada con esquina doblada y barra de color, estilo modelo_cards */}
       <div
-        className={`relative flex shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border bg-[var(--card)] transition-transform group-hover:scale-[1.03] ${grande ? 'w-28 sm:w-32' : 'w-16 sm:w-[4.5rem]'}`}
+        className={`relative flex shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border bg-[var(--card)] transition-transform group-hover:scale-[1.03] ${grande ? 'w-24 sm:w-28' : 'w-16 sm:w-[4.5rem]'}`}
         style={{ borderColor: 'var(--bloque-borde)' }}
       >
         <span
@@ -83,7 +83,7 @@ function TarjetaSeleccion({
         />
         <div className={`flex flex-1 items-center justify-center ${grande ? 'py-4' : 'py-2'}`}>
           {imagenIcono ? (
-            <img src={imagenIcono} alt="" className={grande ? 'size-14 object-contain sm:size-16' : 'size-8 object-contain sm:size-9'} />
+            <img src={imagenIcono} alt="" className={grande ? 'size-12 object-contain sm:size-14' : 'size-8 object-contain sm:size-9'} />
           ) : Icono ? (
             <Icono className={grande ? 'size-11 sm:size-12' : 'size-6 sm:size-7'} style={{ color: acento }} strokeWidth={1.75} />
           ) : null}
@@ -138,7 +138,7 @@ export default function SeleccionarTipoInspeccion() {
   }
 
   return (
-    <div className="mx-auto max-w-[780px]">
+    <div>
       <h1 className="mb-1 text-xl font-semibold text-[var(--cac-azul)]">Nueva inspección</h1>
       <p className="mb-3 text-sm text-muted-foreground">Registra una nueva inspección de seguridad y salud en el trabajo.</p>
 
