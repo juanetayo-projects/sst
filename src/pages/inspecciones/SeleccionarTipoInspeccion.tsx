@@ -176,7 +176,7 @@ export default function SeleccionarTipoInspeccion() {
           {cargando ? (
             <div className="p-8 text-center text-sm text-muted-foreground">Cargando…</div>
           ) : grupoActivo ? (
-            <div className="grid items-start grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-2 gap-4">
               {grupoActivo.tipos.map((tipo) => (
                 <TarjetaSeleccion
                   key={tipo.id}
@@ -184,6 +184,7 @@ export default function SeleccionarTipoInspeccion() {
                   icono={ICONOS[tipo.codigo] ?? ShieldAlert}
                   titulo={tipo.nombre}
                   subtitulo={REFERENCIA_TIPO[tipo.codigo]}
+                  grande
                   onClick={() => navigate(`/inspecciones/nueva/${tipo.codigo}`)}
                 />
               ))}
