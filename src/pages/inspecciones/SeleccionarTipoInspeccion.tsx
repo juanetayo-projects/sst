@@ -52,7 +52,6 @@ function TarjetaSeleccion({
   imagenIcono,
   titulo,
   subtitulo,
-  nombresTipos,
   grande,
   onClick,
 }: {
@@ -61,7 +60,6 @@ function TarjetaSeleccion({
   imagenIcono?: string
   titulo: string
   subtitulo?: string
-  nombresTipos?: string[]
   grande?: boolean
   onClick: () => void
 }) {
@@ -70,34 +68,21 @@ function TarjetaSeleccion({
     <button
       type="button"
       onClick={onClick}
-      className={`bloque-${color} tarjeta-categoria group flex min-w-0 flex-col items-center gap-1.5 rounded-2xl border-2 bg-[var(--bloque-fondo)] p-3 text-center transition-all hover:-translate-y-0.5`}
+      className={`bloque-${color} tarjeta-categoria group flex min-w-0 flex-col items-center justify-center gap-2 rounded-2xl border-2 bg-[var(--bloque-fondo)] p-3 text-center transition-all hover:-translate-y-0.5 ${grande ? 'sm:p-4' : ''}`}
       style={{ borderColor: 'var(--bloque-borde)' }}
     >
       <div
-        className={`flex shrink-0 items-center justify-center rounded-full bg-[var(--card)] shadow-sm transition-transform group-hover:scale-105 ${grande ? 'size-14 sm:size-16' : 'size-12 sm:size-14'}`}
+        className={`flex shrink-0 items-center justify-center rounded-full bg-[var(--card)] shadow-sm transition-transform group-hover:scale-105 ${grande ? 'size-16 sm:size-20' : 'size-12 sm:size-14'}`}
       >
         {imagenIcono ? (
-          <img src={imagenIcono} alt="" className={grande ? 'size-9 object-contain sm:size-10' : 'size-8 object-contain sm:size-9'} />
+          <img src={imagenIcono} alt="" className={grande ? 'size-10 object-contain sm:size-12' : 'size-8 object-contain sm:size-9'} />
         ) : Icono ? (
-          <Icono className={grande ? 'size-8 sm:size-9' : 'size-6 sm:size-7'} style={{ color: acento }} strokeWidth={1.75} />
+          <Icono className={grande ? 'size-9 sm:size-11' : 'size-6 sm:size-7'} style={{ color: acento }} strokeWidth={1.75} />
         ) : null}
       </div>
-      <span className={`font-semibold leading-snug ${grande ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'}`}>{titulo}</span>
+      <span className={`font-semibold leading-snug ${grande ? 'text-base sm:text-lg' : 'text-xs sm:text-sm'}`}>{titulo}</span>
       {subtitulo && (
         <p className={`leading-snug text-muted-foreground ${grande ? 'text-xs sm:text-sm' : 'text-[11px] sm:text-xs'}`}>{subtitulo}</p>
-      )}
-      {nombresTipos && nombresTipos.length > 0 && (
-        <ul className="space-y-0.5 text-left">
-          {nombresTipos.map((nombre) => (
-            <li
-              key={nombre}
-              className="flex items-start gap-1 text-xs leading-tight text-muted-foreground"
-            >
-              <span aria-hidden className="mt-1 size-1 shrink-0 rounded-full" style={{ backgroundColor: acento }} />
-              {nombre}
-            </li>
-          ))}
-        </ul>
       )}
     </button>
   )
@@ -139,10 +124,10 @@ export default function SeleccionarTipoInspeccion() {
   return (
     <div>
       <h1 className="mb-1 text-lg font-semibold text-[var(--cac-azul)]">Nueva inspección</h1>
-      <p className="mb-2 text-sm text-muted-foreground">Registra una nueva inspección de seguridad y salud en el trabajo.</p>
+      <p className="mb-1 text-sm text-muted-foreground">Registra una nueva inspección de seguridad y salud en el trabajo.</p>
 
       <Card>
-        <CardContent className="p-3 sm:p-4">
+        <CardContent className="p-3">
           {grupoActivo ? (
             <div className="mb-2 flex items-start gap-3 border-b border-border pb-2">
               <button
@@ -188,14 +173,13 @@ export default function SeleccionarTipoInspeccion() {
               ))}
             </div>
           ) : (
-            <div className="grid items-start grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-3 gap-2 [&>*:last-child]:col-start-2">
               {grupos.map((grupo) => (
                 <TarjetaSeleccion
                   key={grupo.categoria.id}
                   color={grupo.categoria.color}
                   imagenIcono={`${import.meta.env.BASE_URL}images/iconos-categorias/${grupo.categoria.iconoImg}`}
                   titulo={grupo.categoria.nombre}
-                  nombresTipos={grupo.tipos.map((t) => t.nombre)}
                   grande
                   onClick={() => elegirCategoria(grupo)}
                 />
