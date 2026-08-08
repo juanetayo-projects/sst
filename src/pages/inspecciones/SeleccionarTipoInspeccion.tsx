@@ -49,14 +49,18 @@ const REFERENCIA_TIPO: Record<string, string> = {
 function TarjetaSeleccion({
   color,
   icono: Icono,
+  imagenIcono,
   titulo,
   subtitulo,
+  nombresTipos,
   onClick,
 }: {
   color: CategoriaSST['color']
-  icono: LucideIcon
+  icono?: LucideIcon
+  imagenIcono?: string
   titulo: string
   subtitulo?: string
+  nombresTipos?: string[]
   onClick: () => void
 }) {
   const acento = COLOR_HEX_BLOQUE[color]
@@ -64,16 +68,30 @@ function TarjetaSeleccion({
     <button
       type="button"
       onClick={onClick}
-      className={`bloque-${color} group flex h-full min-w-0 flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-5`}
+      className={`bloque-${color} group flex min-w-0 flex-col items-center gap-2 rounded-xl border border-border bg-card p-3 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-4`}
     >
       <div
         className="flex size-12 shrink-0 items-center justify-center rounded-full transition-transform group-hover:scale-105 sm:size-14"
         style={{ backgroundColor: 'var(--bloque-fondo)' }}
       >
-        <Icono className="size-6 sm:size-7" style={{ color: acento }} strokeWidth={1.75} />
+        {imagenIcono ? (
+          <img src={imagenIcono} alt="" className="size-8 object-contain sm:size-9" />
+        ) : Icono ? (
+          <Icono className="size-6 sm:size-7" style={{ color: acento }} strokeWidth={1.75} />
+        ) : null}
       </div>
       <span className="text-xs font-semibold leading-snug sm:text-sm">{titulo}</span>
       {subtitulo && <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">{subtitulo}</p>}
+      {nombresTipos && nombresTipos.length > 0 && (
+        <ul className="mt-0.5 space-y-0.5 text-left">
+          {nombresTipos.map((nombre) => (
+            <li key={nombre} className="flex items-start gap-1 text-[11px] leading-snug text-muted-foreground sm:text-xs">
+              <span aria-hidden className="mt-1 size-1 shrink-0 rounded-full" style={{ backgroundColor: acento }} />
+              {nombre}
+            </li>
+          ))}
+        </ul>
+      )}
     </button>
   )
 }
@@ -150,7 +168,7 @@ export default function SeleccionarTipoInspeccion() {
           {cargando ? (
             <div className="p-8 text-center text-sm text-muted-foreground">Cargando…</div>
           ) : grupoActivo ? (
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
+            <div className="grid items-start grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:gap-3">
               {grupoActivo.tipos.map((tipo) => (
                 <TarjetaSeleccion
                   key={tipo.id}
@@ -163,14 +181,14 @@ export default function SeleccionarTipoInspeccion() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
+            <div className="grid items-start grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 sm:gap-3">
               {grupos.map((grupo) => (
                 <TarjetaSeleccion
                   key={grupo.categoria.id}
                   color={grupo.categoria.color}
-                  icono={grupo.categoria.icono}
+                  imagenIcono={`${import.meta.env.BASE_URL}images/iconos-categorias/${grupo.categoria.iconoImg}`}
                   titulo={grupo.categoria.nombre}
-                  subtitulo={grupo.categoria.objetivo}
+                  nombresTipos={grupo.tipos.map((t) => t.nombre)}
                   onClick={() => elegirCategoria(grupo)}
                 />
               ))}

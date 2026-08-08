@@ -44,3 +44,4 @@ supabase/.branches/
 # necesita el build (logos, favicon).
 /docs/
 /images/
+/iconos/

@@ -42,6 +42,8 @@ export type CategoriaSST = {
   tipos: string[];
   /** Nombre de archivo en `public/images/rondas/` — infografía diseñada a medida para esta ronda. */
   imagen: string;
+  /** Nombre de archivo en `public/images/iconos-categorias/` — ícono isométrico de la categoría. */
+  iconoImg: string;
 };
 
 /**
@@ -62,6 +64,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: Siren,
     tipos: ["emergencias"],
     imagen: "emergencias.png",
+    iconoImg: "emergencias.png",
   },
   {
     id: "incendios",
@@ -73,6 +76,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: Flame,
     tipos: ["extintores"],
     imagen: "incendios.png",
+    iconoImg: "incendios.png",
   },
   {
     id: "instalaciones",
@@ -85,6 +89,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: SprayCan,
     tipos: ["orden_aseo"],
     imagen: "instalaciones.png",
+    iconoImg: "instalaciones.png",
   },
   {
     id: "quimicas",
@@ -96,6 +101,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: FlaskConical,
     tipos: ["sustancias_quimicas"],
     imagen: "quimicas.png",
+    iconoImg: "quimicas.png",
   },
   {
     id: "epp",
@@ -108,6 +114,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: HardHat,
     tipos: ["epp"],
     imagen: "epp.png",
+    iconoImg: "epp.png",
   },
   {
     id: "vehiculos",
@@ -119,6 +126,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: Ambulance,
     tipos: ["vehiculos_preoperacional"],
     imagen: "vehiculos.png",
+    iconoImg: "vehiculos.png",
   },
   {
     id: "alturas",
@@ -131,6 +139,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: Construction,
     tipos: ["alturas_verificacion", "alturas_preoperacional", "escalera", "andamios"],
     imagen: "alturas.png",
+    iconoImg: "alturas.png",
   },
 ];
 
