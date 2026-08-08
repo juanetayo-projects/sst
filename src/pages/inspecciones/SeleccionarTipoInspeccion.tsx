@@ -68,22 +68,32 @@ function TarjetaSeleccion({
     <button
       type="button"
       onClick={onClick}
-      className={`bloque-${color} tarjeta-categoria group flex min-w-0 items-center gap-3 rounded-2xl border-2 bg-[var(--bloque-fondo)] p-3 text-left transition-all hover:-translate-y-0.5`}
+      className={`bloque-${color} tarjeta-categoria group flex min-w-0 items-stretch gap-3 rounded-2xl border-2 bg-[var(--bloque-fondo)] text-left transition-all hover:-translate-y-0.5 ${grande ? 'p-2.5' : 'p-2'}`}
       style={{ borderColor: 'var(--bloque-borde)' }}
     >
+      {/* Panel del icono: caja enmarcada con esquina doblada y barra de color, estilo modelo_cards */}
       <div
-        className={`flex shrink-0 items-center justify-center rounded-full bg-[var(--card)] shadow-sm transition-transform group-hover:scale-105 ${grande ? 'size-12 sm:size-14' : 'size-11 sm:size-12'}`}
+        className={`relative flex shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border bg-[var(--card)] transition-transform group-hover:scale-[1.03] ${grande ? 'w-20 sm:w-24' : 'w-16 sm:w-[4.5rem]'}`}
+        style={{ borderColor: 'var(--bloque-borde)' }}
       >
-        {imagenIcono ? (
-          <img src={imagenIcono} alt="" className={grande ? 'size-7 object-contain sm:size-8' : 'size-7 object-contain sm:size-8'} />
-        ) : Icono ? (
-          <Icono className={grande ? 'size-6 sm:size-7' : 'size-5 sm:size-6'} style={{ color: acento }} strokeWidth={1.75} />
-        ) : null}
+        <span
+          aria-hidden
+          className="absolute right-0 top-0 size-4 sm:size-5"
+          style={{ background: acento, clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }}
+        />
+        <div className="flex flex-1 items-center justify-center py-2">
+          {imagenIcono ? (
+            <img src={imagenIcono} alt="" className={grande ? 'size-10 object-contain sm:size-12' : 'size-8 object-contain sm:size-9'} />
+          ) : Icono ? (
+            <Icono className={grande ? 'size-8 sm:size-9' : 'size-6 sm:size-7'} style={{ color: acento }} strokeWidth={1.75} />
+          ) : null}
+        </div>
+        <span aria-hidden className="h-1.5 w-full shrink-0" style={{ backgroundColor: acento }} />
       </div>
-      <div className="min-w-0">
-        <span className={`block font-semibold leading-snug ${grande ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'}`}>{titulo}</span>
+      <div className="flex min-w-0 flex-col justify-center py-1">
+        <span className={`block font-bold leading-snug ${grande ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'}`}>{titulo}</span>
         {subtitulo && (
-          <p className={`leading-snug text-muted-foreground ${grande ? 'text-xs sm:text-sm' : 'text-[11px] sm:text-xs'}`}>{subtitulo}</p>
+          <p className={`mt-0.5 line-clamp-2 leading-snug text-muted-foreground ${grande ? 'text-xs sm:text-sm' : 'text-[11px] sm:text-xs'}`}>{subtitulo}</p>
         )}
       </div>
     </button>
@@ -183,6 +193,7 @@ export default function SeleccionarTipoInspeccion() {
                     color={grupo.categoria.color}
                     imagenIcono={`${import.meta.env.BASE_URL}images/iconos-categorias/${grupo.categoria.iconoImg}`}
                     titulo={grupo.categoria.nombre}
+                    subtitulo={grupo.categoria.objetivo}
                     grande
                     onClick={() => elegirCategoria(grupo)}
                   />
@@ -195,6 +206,7 @@ export default function SeleccionarTipoInspeccion() {
                     color={grupo.categoria.color}
                     imagenIcono={`${import.meta.env.BASE_URL}images/iconos-categorias/${grupo.categoria.iconoImg}`}
                     titulo={grupo.categoria.nombre}
+                    subtitulo={grupo.categoria.objetivo}
                     grande
                     onClick={() => elegirCategoria(grupo)}
                   />
