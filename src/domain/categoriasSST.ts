@@ -63,7 +63,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     color: "rojo",
     icono: Siren,
     tipos: ["emergencias"],
-    imagen: "emergencias.png",
+    imagen: "emergencias.webp",
     iconoImg: "emergencias.png",
   },
   {
@@ -75,7 +75,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     color: "rojo",
     icono: Flame,
     tipos: ["extintores"],
-    imagen: "incendios.png",
+    imagen: "incendios.webp",
     iconoImg: "incendios.png",
   },
   {
@@ -88,7 +88,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     color: "teal",
     icono: SprayCan,
     tipos: ["orden_aseo"],
-    imagen: "instalaciones.png",
+    imagen: "instalaciones.webp",
     iconoImg: "instalaciones.png",
   },
   {
@@ -100,7 +100,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     color: "violeta",
     icono: FlaskConical,
     tipos: ["sustancias_quimicas"],
-    imagen: "quimicas.png",
+    imagen: "quimicas.webp",
     iconoImg: "quimicas.png",
   },
   {
@@ -113,7 +113,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     color: "verde",
     icono: HardHat,
     tipos: ["epp"],
-    imagen: "epp.png",
+    imagen: "epp.webp",
     iconoImg: "epp.png",
   },
   {
@@ -125,7 +125,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     color: "azul",
     icono: Ambulance,
     tipos: ["vehiculos_preoperacional"],
-    imagen: "vehiculos.png",
+    imagen: "vehiculos.webp",
     iconoImg: "vehiculos.png",
   },
   {
@@ -138,7 +138,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     color: "ambar",
     icono: Construction,
     tipos: ["alturas_verificacion", "alturas_preoperacional", "escalera", "andamios"],
-    imagen: "alturas.png",
+    imagen: "alturas.webp",
     iconoImg: "alturas.png",
   },
 ];
