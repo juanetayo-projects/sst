@@ -10,7 +10,7 @@ export default function Infografia() {
           <img
             src={`${import.meta.env.BASE_URL}images/clasificacion_rondas.webp`}
             alt="Clasificación de Rondas de Inspección SST"
-            className="animate-infografia w-full max-w-2xl rounded-xl shadow-relieve"
+            className="animate-infografia w-full rounded-xl shadow-relieve"
           />
         </CardContent>
       </Card>
