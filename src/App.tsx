@@ -11,6 +11,7 @@ import Historial from '@/pages/inspecciones/Historial'
 import DetalleInspeccion from '@/pages/inspecciones/DetalleInspeccion'
 import Estadisticas from '@/pages/Estadisticas'
 import InformeEjecutivo from '@/pages/InformeEjecutivo'
+import Infografia from '@/pages/Infografia'
 import Usuarios from '@/pages/admin/Usuarios'
 import Catalogos from '@/pages/admin/Catalogos'
 import GestionEncuestas from '@/pages/admin/GestionEncuestas'
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="inspecciones" element={<Historial />} />
             <Route path="estadisticas" element={<Estadisticas />} />
             <Route path="informe-ejecutivo" element={<InformeEjecutivo />} />
+            <Route path="infografia" element={<Infografia />} />
             <Route path="inspecciones/nueva" element={<SeleccionarTipoInspeccion />} />
             <Route path="inspecciones/nueva/:codigo" element={<FormularioInspeccion />} />
             <Route path="inspecciones/:id" element={<DetalleInspeccion />} />
