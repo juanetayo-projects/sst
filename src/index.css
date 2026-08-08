@@ -319,6 +319,18 @@
     text-transform: uppercase;
   }
 
+  /* Tarjeta de selección de categoría/ronda: sombra inferior teñida con el acento de la categoría */
+  .tarjeta-categoria {
+    box-shadow: 0 10px 18px -10px color-mix(in srgb, var(--bloque-acento, var(--cac-azul-600)) 55%, transparent);
+    transition:
+      box-shadow 0.25s ease,
+      transform 0.25s ease;
+  }
+
+  .tarjeta-categoria:hover {
+    box-shadow: 0 16px 26px -10px color-mix(in srgb, var(--bloque-acento, var(--cac-azul-600)) 65%, transparent);
+  }
+
   .bloque-azul {
     --bloque-fondo: var(--tinte-azul);
     --bloque-borde: var(--tinte-azul-borde);

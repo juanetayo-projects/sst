@@ -70,7 +70,7 @@ function TarjetaSeleccion({
     <button
       type="button"
       onClick={onClick}
-      className={`bloque-${color} group flex min-w-0 flex-col items-center gap-2 rounded-xl border-2 bg-[var(--bloque-fondo)] text-center shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${grande ? 'p-4 sm:p-5' : 'p-3 sm:p-4'}`}
+      className={`bloque-${color} tarjeta-categoria group flex min-w-0 flex-col items-center gap-2 rounded-2xl border-2 bg-[var(--bloque-fondo)] text-center transition-all hover:-translate-y-0.5 ${grande ? 'p-4 sm:p-5' : 'p-3 sm:p-4'}`}
       style={{ borderColor: 'var(--bloque-borde)' }}
     >
       <div
