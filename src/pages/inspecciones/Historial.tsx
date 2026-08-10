@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FileSpreadsheet, FileDown, Eye } from 'lucide-react'
+import { FileSpreadsheet, FileDown, Eye, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
 import type { TipoInspeccion } from '@/domain/inspecciones'
 import { formatearFecha } from '@/lib/utils'
 import { exportarExcel, exportarListaPDF } from '@/lib/exportar'
@@ -14,6 +15,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { SkeletonTabla } from '@/components/ui/skeleton'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { MensajeDialog, type Mensaje } from '@/components/ui/mensaje-dialog'
 
 type FilaInspeccion = {
   id: string
@@ -23,6 +26,7 @@ type FilaInspeccion = {
   fecha_inspeccion: string
   estado: string
   urgente: boolean
+  inspector_id: string
   tipos_inspeccion: { nombre: string } | null
   profiles: { nombre_completo: string } | null
 }
@@ -30,11 +34,15 @@ type FilaInspeccion = {
 const TODOS = '__todos__'
 
 export default function Historial() {
+  const { perfil } = useAuth()
   const [cargando, setCargando] = useState(true)
   const [filas, setFilas] = useState<FilaInspeccion[]>([])
   const [tipos, setTipos] = useState<TipoInspeccion[]>([])
   const [empresas, setEmpresas] = useState<string[]>([])
   const [sedes, setSedes] = useState<string[]>([])
+  const [aEliminar, setAEliminar] = useState<FilaInspeccion | null>(null)
+  const [eliminando, setEliminando] = useState(false)
+  const [mensaje, setMensaje] = useState<Mensaje>(null)
 
   const [tipoId, setTipoId] = useState(TODOS)
   const [empresa, setEmpresa] = useState(TODOS)
@@ -56,11 +64,11 @@ export default function Historial() {
     })
   }, [])
 
-  useEffect(() => {
+  function cargarFilas() {
     setCargando(true)
     let consulta = supabase
       .from('inspecciones')
-      .select('id,empresa,sede,lugar,fecha_inspeccion,estado,urgente,tipos_inspeccion(nombre),profiles(nombre_completo)')
+      .select('id,empresa,sede,lugar,fecha_inspeccion,estado,urgente,inspector_id,tipos_inspeccion(nombre),profiles(nombre_completo)')
       .order('fecha_inspeccion', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(500)
@@ -77,7 +85,28 @@ export default function Historial() {
       setFilas((data ?? []) as unknown as FilaInspeccion[])
       setCargando(false)
     })
-  }, [tipoId, empresa, sede, estado, soloUrgentes, desde, hasta])
+  }
+
+  useEffect(cargarFilas, [tipoId, empresa, sede, estado, soloUrgentes, desde, hasta])
+
+  function puedeEditar(f: FilaInspeccion) {
+    if (!perfil) return false
+    if (perfil.role === 'admin') return true
+    return f.inspector_id === perfil.id && f.estado === 'borrador'
+  }
+
+  async function eliminarInspeccion() {
+    if (!aEliminar) return
+    setEliminando(true)
+    const { error } = await supabase.from('inspecciones').delete().eq('id', aEliminar.id)
+    setEliminando(false)
+    setAEliminar(null)
+    if (error) {
+      setMensaje({ tipo: 'error', titulo: 'No se pudo eliminar', texto: error.message })
+      return
+    }
+    cargarFilas()
+  }
 
   const filasExport = useMemo(
     () =>
@@ -237,14 +266,14 @@ export default function Historial() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                <th className="px-3 py-2 font-medium">Fecha</th>
-                <th className="px-3 py-2 font-medium">Tipo</th>
-                <th className="px-3 py-2 font-medium">Empresa</th>
-                <th className="px-3 py-2 font-medium">Sede</th>
-                <th className="px-3 py-2 font-medium">Inspector</th>
-                <th className="px-3 py-2 font-medium">Estado</th>
-                <th className="px-3 py-2 font-medium"></th>
+              <tr className="franja-institucional text-left text-xs text-white">
+                <th className="px-3 py-2.5 font-semibold">Fecha</th>
+                <th className="px-3 py-2.5 font-semibold">Tipo</th>
+                <th className="px-3 py-2.5 font-semibold">Empresa</th>
+                <th className="px-3 py-2.5 font-semibold">Sede</th>
+                <th className="px-3 py-2.5 font-semibold">Inspector</th>
+                <th className="px-3 py-2.5 font-semibold">Estado</th>
+                <th className="px-3 py-2.5 font-semibold"></th>
               </tr>
             </thead>
             <tbody>
@@ -269,14 +298,34 @@ export default function Historial() {
                       {f.estado === 'completada' ? 'Completada' : 'Borrador'}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2 text-right">
-                    <Link
-                      to={`/inspecciones/${f.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-[var(--cac-azul-contraste)] hover:underline"
-                    >
-                      <Eye className="size-3.5" />
-                      Ver
-                    </Link>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link
+                        to={`/inspecciones/${f.id}`}
+                        className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                        title="Ver"
+                      >
+                        <Eye className="size-3.5" />
+                      </Link>
+                      {puedeEditar(f) && (
+                        <>
+                          <Link
+                            to={`/inspecciones/${f.id}/editar`}
+                            className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                            title="Editar"
+                          >
+                            <Pencil className="size-3.5" />
+                          </Link>
+                          <button
+                            onClick={() => setAEliminar(f)}
+                            className="inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-[var(--error)]"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -284,6 +333,17 @@ export default function Historial() {
           </table>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={aEliminar !== null}
+        titulo="Eliminar inspección"
+        descripcion={`Se eliminará de forma permanente la inspección de "${aEliminar?.tipos_inspeccion?.nombre ?? ''}"${aEliminar?.empresa ? ` en ${aEliminar.empresa}` : ''} del ${aEliminar ? formatearFecha(aEliminar.fecha_inspeccion) : ''}. Esta acción no se puede deshacer.`}
+        cargando={eliminando}
+        onConfirm={eliminarInspeccion}
+        onCancel={() => setAEliminar(null)}
+      />
+
+      <MensajeDialog mensaje={mensaje} onClose={() => setMensaje(null)} />
     </div>
   )
 }

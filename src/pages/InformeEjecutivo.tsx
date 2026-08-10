@@ -161,12 +161,12 @@ function PopoverDetalle<T>({
             <X className="size-3.5" />
           </button>
         </div>
-        <div className="max-h-56 overflow-y-auto">
+        <div className="max-h-56 overflow-y-auto rounded-md">
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="text-left text-muted-foreground">
+              <tr className="franja-institucional text-left text-white">
                 {popover.columnas.map((c) => (
-                  <th key={c.header} className="pb-1 pr-2 font-medium">
+                  <th key={c.header} className="px-2 py-1.5 font-semibold">
                     {c.header}
                   </th>
                 ))}
@@ -176,7 +176,7 @@ function PopoverDetalle<T>({
               {popover.filas.map((f) => (
                 <tr key={getKey(f)} className="border-t border-border/60">
                   {popover.columnas.map((c) => (
-                    <td key={c.header} className="py-1 pr-2 align-top">
+                    <td key={c.header} className="px-2 py-1 align-top">
                       {String(c.get(f) ?? '') || '—'}
                     </td>
                   ))}
@@ -452,7 +452,7 @@ export default function InformeEjecutivo() {
           </div>
 
           {/* Fila 2 */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch">
             <Card>
               <CardContent className="p-4">
                 <div className="mb-2 flex items-center justify-between">
@@ -526,71 +526,74 @@ export default function InformeEjecutivo() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="space-y-3 p-4">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Alertas</div>
+            <div className="flex flex-col gap-4">
+              <Card className="flex-1">
+                <CardContent className="flex h-full flex-col space-y-3 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Alertas</div>
 
-                {rondasVencidas.length === 0 && urgentesPeriodo.length === 0 && borradoresViejos.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Sin alertas activas.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {rondasVencidas.map((r) => (
-                      <div key={r.categoria.id} className="flex items-start gap-2 rounded-lg bg-[var(--advertencia-suave)] p-2 text-xs">
-                        <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-[var(--advertencia)]" />
-                        <span>
-                          <strong>{r.categoria.nombre}</strong> sin inspección {r.dias === null ? 'registrada' : `hace ${r.dias} días`} (ronda mensual).
-                        </span>
-                      </div>
-                    ))}
-                    {urgentesPeriodo.length > 0 && (
-                      <button
-                        onClick={(e) => abrirPopover(setPopover, e, `Urgentes del periodo (${urgentesPeriodo.length})`, COLUMNAS_POPOVER, urgentesPeriodo)}
-                        className="flex w-full items-start gap-2 rounded-lg bg-[var(--error-suave)] p-2 text-left text-xs hover:brightness-95"
-                      >
-                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-[var(--error)]" />
-                        <span>
-                          <strong>{urgentesPeriodo.length}</strong> inspección(es) marcadas urgentes en el periodo.
-                        </span>
-                      </button>
-                    )}
-                    {borradoresViejos.length > 0 && (
-                      <button
-                        onClick={(e) => abrirPopover(setPopover, e, `Borradores sin cerrar (${borradoresViejos.length})`, COLUMNAS_POPOVER, borradoresViejos)}
-                        className="flex w-full items-start gap-2 rounded-lg bg-[var(--neutro-suave)] p-2 text-left text-xs hover:brightness-95"
-                      >
-                        <FileClock className="mt-0.5 size-3.5 shrink-0 text-[var(--neutro)]" />
-                        <span>
-                          <strong>{borradoresViejos.length}</strong> borrador(es) con más de {VENTANA_BORRADOR_DIAS} días sin finalizar.
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  {rondasVencidas.length === 0 && urgentesPeriodo.length === 0 && borradoresViejos.length === 0 ? (
+                    <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin alertas activas.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {rondasVencidas.map((r) => (
+                        <div key={r.categoria.id} className="flex items-start gap-2 rounded-lg bg-[var(--advertencia-suave)] p-2 text-xs">
+                          <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-[var(--advertencia)]" />
+                          <span>
+                            <strong>{r.categoria.nombre}</strong> sin inspección {r.dias === null ? 'registrada' : `hace ${r.dias} días`} (ronda mensual).
+                          </span>
+                        </div>
+                      ))}
+                      {urgentesPeriodo.length > 0 && (
+                        <button
+                          onClick={(e) => abrirPopover(setPopover, e, `Urgentes del periodo (${urgentesPeriodo.length})`, COLUMNAS_POPOVER, urgentesPeriodo)}
+                          className="flex w-full items-start gap-2 rounded-lg bg-[var(--error-suave)] p-2 text-left text-xs hover:brightness-95"
+                        >
+                          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-[var(--error)]" />
+                          <span>
+                            <strong>{urgentesPeriodo.length}</strong> inspección(es) marcadas urgentes en el periodo.
+                          </span>
+                        </button>
+                      )}
+                      {borradoresViejos.length > 0 && (
+                        <button
+                          onClick={(e) => abrirPopover(setPopover, e, `Borradores sin cerrar (${borradoresViejos.length})`, COLUMNAS_POPOVER, borradoresViejos)}
+                          className="flex w-full items-start gap-2 rounded-lg bg-[var(--neutro-suave)] p-2 text-left text-xs hover:brightness-95"
+                        >
+                          <FileClock className="mt-0.5 size-3.5 shrink-0 text-[var(--neutro)]" />
+                          <span>
+                            <strong>{borradoresViejos.length}</strong> borrador(es) con más de {VENTANA_BORRADOR_DIAS} días sin finalizar.
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="flex-1">
+                <CardContent className="flex h-full flex-col p-4">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Empresas con más hallazgos "No Cumple"</div>
+                  {rankingEmpresas.length === 0 ? (
+                    <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin hallazgos registrados en el periodo.</p>
+                  ) : (
+                    <div className="min-h-0 flex-1">
+                      <ResponsiveContainer width="100%" height="100%" minHeight={120}>
+                        <BarChart data={rankingEmpresas} layout="vertical" margin={{ left: 0, right: 24, top: 4, bottom: 4 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                          <YAxis type="category" dataKey="empresa" width={110} tick={{ fontSize: 10.5 }} />
+                          <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }} formatter={(v: number) => [v, 'Hallazgos']} />
+                          <Bar dataKey="hallazgos" fill="var(--error)" radius={[0, 6, 6, 0]}>
+                            <LabelList dataKey="hallazgos" position="right" style={{ fontSize: 11, fontWeight: 600, fill: 'var(--foreground)' }} />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-
-          {/* Fila 3 */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Empresas con más hallazgos "No Cumple"</div>
-              {rankingEmpresas.length === 0 ? (
-                <p className="p-6 text-center text-sm text-muted-foreground">Sin hallazgos registrados en el periodo.</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={Math.max(140, rankingEmpresas.length * 40)}>
-                  <BarChart data={rankingEmpresas} layout="vertical" margin={{ left: 0, right: 24, top: 4, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="empresa" width={160} tick={{ fontSize: 11 }} />
-                    <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }} formatter={(v: number) => [v, 'Hallazgos']} />
-                    <Bar dataKey="hallazgos" fill="var(--error)" radius={[0, 6, 6, 0]}>
-                      <LabelList dataKey="hallazgos" position="right" style={{ fontSize: 11, fontWeight: 600, fill: 'var(--foreground)' }} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
 
           <p className="text-center text-xs text-muted-foreground">
             ¿Buscas una inspección puntual? Consulta el{' '}

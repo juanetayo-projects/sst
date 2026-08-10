@@ -39,6 +39,7 @@ export default function App() {
             <Route path="infografia" element={<Infografia />} />
             <Route path="inspecciones/nueva" element={<SeleccionarTipoInspeccion />} />
             <Route path="inspecciones/nueva/:codigo" element={<FormularioInspeccion />} />
+            <Route path="inspecciones/:id/editar" element={<FormularioInspeccion />} />
             <Route path="inspecciones/:id" element={<DetalleInspeccion />} />
             <Route
               path="admin/usuarios"

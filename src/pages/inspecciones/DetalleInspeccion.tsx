@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RespuestaLinea } from "@/components/inspecciones/RespuestaLinea";
+import { TermometroCategoria } from "@/components/inspecciones/TermometroCategoria";
 import { NavSecciones, type Seccion } from "@/components/inspecciones/NavSecciones";
 import { PanelInfograficoSST } from "@/components/inspecciones/PanelInfograficoSST";
 import { obtenerCategoriaSST, COLOR_HEX_BLOQUE, type ColorBloque } from "@/domain/categoriasSST";
@@ -242,6 +243,10 @@ export default function DetalleInspeccion() {
                 </span>
                 {cat.nombre}
               </div>
+              <TermometroCategoria
+                preguntas={estructura.porCategoria.get(cat.id) ?? []}
+                respuestas={respuestas}
+              />
               <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
                 {(estructura.porCategoria.get(cat.id) ?? []).map((p) => (
                   <RespuestaLinea

@@ -29,9 +29,10 @@ import { PanelInfograficoSST } from "@/components/inspecciones/PanelInfograficoS
 import { obtenerCategoriaSST, type ColorBloque } from "@/domain/categoriasSST";
 
 export default function FormularioInspeccion() {
-  const { codigo } = useParams<{ codigo: string }>();
+  const { codigo, id: idInspeccion } = useParams<{ codigo?: string; id?: string }>();
   const navigate = useNavigate();
   const { session } = useAuth();
+  const modoEdicion = Boolean(idInspeccion);
 
   const [cargando, setCargando] = useState(true);
   const [estructura, setEstructura] = useState<EstructuraInspeccion | null>(
@@ -40,6 +41,7 @@ export default function FormularioInspeccion() {
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [empresas, setEmpresas] = useState<string[]>([]);
   const [sedes, setSedes] = useState<string[]>([]);
+  const [estadoOriginal, setEstadoOriginal] = useState<"borrador" | "completada">("borrador");
 
   const [empresa, setEmpresa] = useState("");
   const [sede, setSede] = useState("");
@@ -56,6 +58,50 @@ export default function FormularioInspeccion() {
   const [mensaje, setMensaje] = useState<Mensaje>(null);
 
   useEffect(() => {
+    if (modoEdicion) {
+      if (!idInspeccion) return;
+      setCargando(true);
+      setErrorCarga(null);
+      Promise.resolve(
+        supabase
+          .from("inspecciones")
+          .select("empresa,sede,lugar,fecha_inspeccion,estado,tipos_inspeccion(codigo)")
+          .eq("id", idInspeccion)
+          .single(),
+      )
+        .then(async ({ data: insp, error: errorInsp }) => {
+          if (errorInsp || !insp) {
+            setErrorCarga("No se encontró la inspección.");
+            setCargando(false);
+            return;
+          }
+          const tipoCodigo = (insp as unknown as { tipos_inspeccion: { codigo: string } }).tipos_inspeccion.codigo;
+          const [est, empresasRes, sedesRes, respuestasRes] = await Promise.all([
+            cargarEstructuraInspeccion(tipoCodigo),
+            supabase.from("empresas").select("nombre").eq("activo", true).order("orden"),
+            supabase.from("sedes").select("nombre").eq("activo", true).order("orden"),
+            supabase.from("respuestas_inspeccion").select("pregunta_id,valor").eq("inspeccion_id", idInspeccion),
+          ]);
+          setEstructura(est);
+          setEmpresas((empresasRes.data ?? []).map((e) => e.nombre));
+          setSedes((sedesRes.data ?? []).map((s) => s.nombre));
+          setEmpresa(insp.empresa ?? "");
+          setSede(insp.sede ?? "");
+          setLugar(insp.lugar ?? "");
+          setFecha(insp.fecha_inspeccion);
+          setEstadoOriginal(insp.estado === "completada" ? "completada" : "borrador");
+          const mapa: Record<string, string> = {};
+          for (const f of respuestasRes.data ?? []) mapa[f.pregunta_id] = f.valor ?? "";
+          setRespuestas(mapa);
+          setCargando(false);
+        })
+        .catch((e: Error) => {
+          setErrorCarga(e.message);
+          setCargando(false);
+        });
+      return;
+    }
+
     if (!codigo) return;
     setCargando(true);
     setErrorCarga(null);
@@ -75,7 +121,7 @@ export default function FormularioInspeccion() {
       })
       .catch((e: Error) => setErrorCarga(e.message))
       .finally(() => setCargando(false));
-  }, [codigo]);
+  }, [codigo, idInspeccion, modoEdicion]);
 
   function cambiarRespuesta(preguntaId: string, valor: string) {
     setRespuestas((prev) => ({ ...prev, [preguntaId]: valor }));
@@ -125,6 +171,73 @@ export default function FormularioInspeccion() {
     const { fortalezas, hallazgos, urgente, responsable } =
       mapearCierreAColumnas(estructura.cierre, respuestas);
 
+    const filasRespuestas = (idInsp: string) =>
+      preguntasVisibles
+        .filter((p) => respuestas[p.id])
+        .map((p) => ({
+          inspeccion_id: idInsp,
+          pregunta_id: p.id,
+          valor: respuestas[p.id],
+        }));
+
+    if (modoEdicion && idInspeccion) {
+      // Las respuestas se reescriben mientras la inspección conserva su estado original,
+      // porque las políticas RLS de un inspector solo permiten tocar respuestas de una inspección en 'borrador'.
+      const { error: errorBorrado } = await supabase
+        .from("respuestas_inspeccion")
+        .delete()
+        .eq("inspeccion_id", idInspeccion);
+      if (errorBorrado) {
+        setGuardando(null);
+        setMensaje({ tipo: "error", titulo: "No se pudo guardar", texto: errorBorrado.message });
+        return;
+      }
+
+      const filas = filasRespuestas(idInspeccion);
+      if (filas.length > 0) {
+        const { error: errorRespuestas } = await supabase.from("respuestas_inspeccion").insert(filas);
+        if (errorRespuestas) {
+          setGuardando(null);
+          setMensaje({
+            tipo: "error",
+            titulo: "Inspección actualizada con errores",
+            texto: `No se pudieron guardar todas las respuestas: ${errorRespuestas.message}`,
+          });
+          return;
+        }
+      }
+
+      const { error: errorUpdate } = await supabase
+        .from("inspecciones")
+        .update({
+          empresa: empresa || null,
+          sede: sede || null,
+          lugar: lugar || null,
+          fecha_inspeccion: fecha,
+          estado,
+          fortalezas,
+          hallazgos,
+          urgente,
+          responsable,
+        })
+        .eq("id", idInspeccion);
+
+      if (errorUpdate) {
+        setGuardando(null);
+        setMensaje({ tipo: "error", titulo: "No se pudo guardar", texto: errorUpdate.message });
+        return;
+      }
+
+      setGuardando(null);
+      setMensaje({
+        tipo: "exito",
+        titulo: "Inspección actualizada",
+        texto: "Los cambios se guardaron correctamente.",
+      });
+      setTimeout(() => navigate(`/inspecciones/${idInspeccion}`), 1200);
+      return;
+    }
+
     const { data: inspeccion, error: errorInspeccion } = await supabase
       .from("inspecciones")
       .insert({
@@ -153,13 +266,7 @@ export default function FormularioInspeccion() {
       return;
     }
 
-    const filas = preguntasVisibles
-      .filter((p) => respuestas[p.id])
-      .map((p) => ({
-        inspeccion_id: inspeccion.id,
-        pregunta_id: p.id,
-        valor: respuestas[p.id],
-      }));
+    const filas = filasRespuestas(inspeccion.id);
 
     if (filas.length > 0) {
       const { error: errorRespuestas } = await supabase
@@ -224,13 +331,14 @@ export default function FormularioInspeccion() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Link
-              to="/inspecciones/nueva"
+              to={modoEdicion ? `/inspecciones/${idInspeccion}` : "/inspecciones/nueva"}
               className="rounded-md p-1.5 text-muted-foreground hover:bg-accent"
             >
               <ArrowLeft className="size-4" />
             </Link>
             <h1 className="text-base font-semibold text-[var(--cac-azul)]">
               {estructura.tipo.nombre}
+              {modoEdicion && <span className="ml-2 text-xs font-normal text-muted-foreground">(editando)</span>}
             </h1>
           </div>
 
@@ -347,19 +455,27 @@ export default function FormularioInspeccion() {
           )}
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button
-              variant="outline"
-              cargando={guardando === "borrador"}
-              onClick={() => guardar("borrador")}
-            >
-              Guardar borrador
-            </Button>
-            <Button
-              cargando={guardando === "completada"}
-              onClick={() => guardar("completada")}
-            >
-              Finalizar inspección
-            </Button>
+            {modoEdicion && estadoOriginal === "completada" ? (
+              <Button cargando={guardando === "completada"} onClick={() => guardar("completada")}>
+                Guardar cambios
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  cargando={guardando === "borrador"}
+                  onClick={() => guardar("borrador")}
+                >
+                  Guardar borrador
+                </Button>
+                <Button
+                  cargando={guardando === "completada"}
+                  onClick={() => guardar("completada")}
+                >
+                  Finalizar inspección
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

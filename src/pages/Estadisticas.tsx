@@ -5,8 +5,6 @@ import { FileSpreadsheet, FileDown } from 'lucide-react'
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   XAxis,
@@ -32,6 +30,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 type FilaInspeccion = {
+  id: string
   empresa: string | null
   sede: string | null
   fecha_inspeccion: string
@@ -40,12 +39,17 @@ type FilaInspeccion = {
   tipos_inspeccion: { codigo: string; nombre: string } | null
 }
 
+type FilaRespuesta = { valor: string | null; inspeccion_id: string }
+
 const TODOS = '__todos__'
 const PALETA_PIE = ['#0D2D6B', '#0B7A43', '#8A3F05', '#5219A8', '#0B5D56', '#A61B12', '#64748B']
+const CONFORME = new Set(['Cumple', 'Sí'])
+const NO_CONFORME = new Set(['No Cumple', 'No'])
 
 export default function Estadisticas() {
   const [cargando, setCargando] = useState(true)
   const [filas, setFilas] = useState<FilaInspeccion[]>([])
+  const [respuestasOpcion, setRespuestasOpcion] = useState<FilaRespuesta[]>([])
   const [tipos, setTipos] = useState<TipoInspeccion[]>([])
   const [empresas, setEmpresas] = useState<string[]>([])
   const [sedes, setSedes] = useState<string[]>([])
@@ -74,7 +78,7 @@ export default function Estadisticas() {
     setCargando(true)
     let consulta = supabase
       .from('inspecciones')
-      .select('empresa,sede,fecha_inspeccion,estado,urgente,tipos_inspeccion(codigo,nombre)')
+      .select('id,empresa,sede,fecha_inspeccion,estado,urgente,tipos_inspeccion(codigo,nombre)')
       .order('fecha_inspeccion', { ascending: true })
       .limit(2000)
 
@@ -87,8 +91,23 @@ export default function Estadisticas() {
     if (hasta) consulta = consulta.lte('fecha_inspeccion', hasta)
 
     consulta.then(({ data }) => {
-      setFilas((data ?? []) as unknown as FilaInspeccion[])
-      setCargando(false)
+      const actual = (data ?? []) as unknown as FilaInspeccion[]
+      setFilas(actual)
+      const ids = actual.map((f) => f.id)
+      if (ids.length === 0) {
+        setRespuestasOpcion([])
+        setCargando(false)
+        return
+      }
+      supabase
+        .from('respuestas_inspeccion')
+        .select('valor,inspeccion_id,preguntas!inner(tipo_campo)')
+        .eq('preguntas.tipo_campo', 'opcion')
+        .in('inspeccion_id', ids)
+        .then(({ data: respuestas }) => {
+          setRespuestasOpcion((respuestas ?? []) as unknown as FilaRespuesta[])
+          setCargando(false)
+        })
     })
   }, [tipoId, empresa, sede, estado, soloUrgentes, desde, hasta])
 
@@ -116,16 +135,38 @@ export default function Estadisticas() {
     return Array.from(conteo.values()).sort((a, b) => b.total - a.total)
   }, [filas])
 
-  const porMes = useMemo(() => {
-    const conteo = new Map<string, number>()
-    for (const f of filas) {
-      const mes = f.fecha_inspeccion.slice(0, 7)
-      conteo.set(mes, (conteo.get(mes) ?? 0) + 1)
+  const cumplimientoPorMes = useMemo(() => {
+    const porInspeccion = new Map(filas.map((f) => [f.id, f]))
+    const acumulado = new Map<string, { conforme: number; noConforme: number; noAplica: number }>()
+    for (const r of respuestasOpcion) {
+      if (!r.valor) continue
+      const insp = porInspeccion.get(r.inspeccion_id)
+      if (!insp) continue
+      const mes = insp.fecha_inspeccion.slice(0, 7)
+      const actual = acumulado.get(mes) ?? { conforme: 0, noConforme: 0, noAplica: 0 }
+      if (CONFORME.has(r.valor)) actual.conforme += 1
+      else if (NO_CONFORME.has(r.valor)) actual.noConforme += 1
+      else actual.noAplica += 1
+      acumulado.set(mes, actual)
     }
-    return Array.from(conteo.entries())
+    return Array.from(acumulado.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([mes, total]) => ({ mes, label: format(parseISO(`${mes}-01`), 'MMM yyyy', { locale: es }), total }))
-  }, [filas])
+      .map(([mes, c]) => {
+        const total = c.conforme + c.noConforme + c.noAplica
+        const pctConforme = total > 0 ? Math.round((c.conforme / total) * 100) : 0
+        const pctNoConforme = total > 0 ? Math.round((c.noConforme / total) * 100) : 0
+        return {
+          mes,
+          label: format(parseISO(`${mes}-01`), 'MMM yyyy', { locale: es }),
+          conforme: c.conforme,
+          noConforme: c.noConforme,
+          noAplica: c.noAplica,
+          pctConforme,
+          pctNoConforme,
+          pctNoAplica: Math.max(0, 100 - pctConforme - pctNoConforme),
+        }
+      })
+  }, [filas, respuestasOpcion])
 
   const porEmpresa = useMemo(() => {
     const conteo = new Map<string, number>()
@@ -342,71 +383,68 @@ export default function Estadisticas() {
             </div>
           </div>
 
-          <div>
-            <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Tendencia mensual</div>
-            <Card>
-              <CardContent className="p-4">
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={porMes} margin={{ left: 0, right: 16, top: 20, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }}
-                      formatter={(v: number) => [v, 'Inspecciones']}
-                      labelFormatter={(label: string) => `Mes: ${label}`}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="total"
-                      name="Inspecciones"
-                      stroke="var(--cac-azul)"
-                      strokeWidth={2.5}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 5 }}
-                    >
-                      <LabelList
-                        dataKey="total"
-                        position="top"
-                        style={{ fontSize: 11, fontWeight: 600, fill: 'var(--cac-azul)' }}
-                      />
-                    </Line>
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div>
+              <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">% Cumplimiento mensual</div>
+              <Card>
+                <CardContent className="p-4">
+                  {cumplimientoPorMes.length === 0 ? (
+                    <div className="flex h-[280px] items-center justify-center text-center text-sm text-muted-foreground">
+                      Sin respuestas de cumplimiento en el periodo.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={cumplimientoPorMes} margin={{ left: 0, right: 8, top: 4, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                        <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} />
+                        <Tooltip
+                          contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }}
+                          formatter={(v: number, name: string) => [`${v}%`, name]}
+                          labelFormatter={(label: string) => `Mes: ${label}`}
+                        />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="pctConforme" name="Cumple" stackId="pct" fill="var(--exito)" />
+                        <Bar dataKey="pctNoConforme" name="No Cumple" stackId="pct" fill="var(--error)" />
+                        <Bar dataKey="pctNoAplica" name="No Aplica" stackId="pct" fill="var(--neutro)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-          <div>
-            <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Resumen por tipo</div>
-            <Card className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                    <th className="px-3 py-2 font-medium">Tipo de inspección</th>
-                    <th className="px-3 py-2 font-medium text-right">Completadas</th>
-                    <th className="px-3 py-2 font-medium text-right">Borradores</th>
-                    <th className="px-3 py-2 font-medium text-right">Urgentes</th>
-                    <th className="px-3 py-2 font-medium text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tablaPorTipoYEstado.map((f, i) => (
-                    <tr
-                      key={f.nombre}
-                      className="border-b border-border/60 last:border-0"
-                      style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}
-                    >
-                      <td className="px-3 py-2">{f.nombre}</td>
-                      <td className="px-3 py-2 text-right tabular">{f.completadas}</td>
-                      <td className="px-3 py-2 text-right tabular">{f.borradores}</td>
-                      <td className="px-3 py-2 text-right tabular">{f.urgentes}</td>
-                      <td className="px-3 py-2 text-right font-semibold tabular">{f.total}</td>
+            <div>
+              <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Resumen por tipo</div>
+              <Card className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="franja-institucional text-left text-xs text-white">
+                      <th className="px-3 py-2.5 font-semibold">Tipo de inspección</th>
+                      <th className="px-3 py-2.5 font-semibold text-right">Completadas</th>
+                      <th className="px-3 py-2.5 font-semibold text-right">Borradores</th>
+                      <th className="px-3 py-2.5 font-semibold text-right">Urgentes</th>
+                      <th className="px-3 py-2.5 font-semibold text-right">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
+                  </thead>
+                  <tbody>
+                    {tablaPorTipoYEstado.map((f, i) => (
+                      <tr
+                        key={f.nombre}
+                        className="border-b border-border/60 last:border-0"
+                        style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}
+                      >
+                        <td className="px-3 py-2">{f.nombre}</td>
+                        <td className="px-3 py-2 text-right tabular">{f.completadas}</td>
+                        <td className="px-3 py-2 text-right tabular">{f.borradores}</td>
+                        <td className="px-3 py-2 text-right tabular">{f.urgentes}</td>
+                        <td className="px-3 py-2 text-right font-semibold tabular">{f.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </div>
           </div>
         </div>
       )}
