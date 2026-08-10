@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { format, parseISO, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { AlertTriangle, CalendarClock, FileClock, TrendingDown, TrendingUp, X } from 'lucide-react'
+import { AlertTriangle, CalendarClock, ChevronRight, FileClock, HelpCircle, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import type { TipoInspeccion } from '@/domain/inspecciones'
@@ -146,10 +146,12 @@ function PopoverDetalle<T>({
   popover,
   onClose,
   getKey,
+  onFilaClick,
 }: {
   popover: PopoverState<T>
   onClose: () => void
   getKey: (r: T) => string | number
+  onFilaClick?: (r: T) => void
 }) {
   if (!popover) return null
   return (
@@ -165,6 +167,9 @@ function PopoverDetalle<T>({
             <X className="size-3.5" />
           </button>
         </div>
+        {onFilaClick && popover.filas.length > 0 && (
+          <p className="mb-1 text-[10px] text-muted-foreground">Clic en una fila para ver el detalle.</p>
+        )}
         <div className="max-h-56 overflow-y-auto rounded-md">
           <table className="w-full text-[11px]">
             <thead>
@@ -174,16 +179,26 @@ function PopoverDetalle<T>({
                     {c.header}
                   </th>
                 ))}
+                {onFilaClick && <th className="px-1 py-1.5" />}
               </tr>
             </thead>
             <tbody>
               {popover.filas.map((f) => (
-                <tr key={getKey(f)} className="border-t border-border/60">
+                <tr
+                  key={getKey(f)}
+                  className={`border-t border-border/60 ${onFilaClick ? 'cursor-pointer hover:bg-accent' : ''}`}
+                  onClick={() => onFilaClick?.(f)}
+                >
                   {popover.columnas.map((c) => (
                     <td key={c.header} className="px-2 py-1 align-top">
                       {String(c.get(f) ?? '') || '—'}
                     </td>
                   ))}
+                  {onFilaClick && (
+                    <td className="px-1 py-1 align-middle text-muted-foreground">
+                      <ChevronRight className="size-3" />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -227,6 +242,7 @@ const COLUMNAS_POPOVER: PopCol<FilaInspeccion>[] = [
 // ────────────────────────────────── Página ──────────────────────────────────
 
 export default function InformeEjecutivo() {
+  const navigate = useNavigate()
   const [cargando, setCargando] = useState(true)
   const [filas, setFilas] = useState<FilaInspeccion[]>([])
   const [filasPrevias, setFilasPrevias] = useState<FilaInspeccion[]>([])
@@ -350,6 +366,13 @@ export default function InformeEjecutivo() {
   const totalActual = filas.length
   const totalPrevio = filasPrevias.length
   const variacion = totalPrevio === 0 ? (totalActual > 0 ? 100 : 0) : Math.round(((totalActual - totalPrevio) / totalPrevio) * 100)
+
+  const rangoAnterior = useMemo(() => {
+    const dias = Math.max(1, Math.round((parseISO(hasta).getTime() - parseISO(desde).getTime()) / 86400000) + 1)
+    const prevHasta = format(addDays(parseISO(desde), -1), 'yyyy-MM-dd')
+    const prevDesde = format(addDays(parseISO(prevHasta), -(dias - 1)), 'yyyy-MM-dd')
+    return { prevDesde, prevHasta }
+  }, [desde, hasta])
 
   // ── Serie temporal ──
   const serieTemporal = useMemo(() => {
@@ -515,7 +538,15 @@ export default function InformeEjecutivo() {
           <div className="grid shrink-0 grid-cols-1 gap-3 lg:grid-cols-3">
             <Card>
               <CardContent className="flex h-full flex-col justify-center gap-1 p-4">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Inspecciones del periodo</div>
+                <div className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Inspecciones del periodo
+                  <span
+                    className="cursor-help text-muted-foreground/70"
+                    title={`% = (Inspecciones del periodo actual − Inspecciones del periodo anterior) ÷ Inspecciones del periodo anterior × 100.`}
+                  >
+                    <HelpCircle className="size-3" />
+                  </span>
+                </div>
                 <div className="text-3xl font-extrabold tabular text-[var(--cac-azul)]">{totalActual}</div>
                 <div
                   className={`flex items-center gap-1 text-xs font-medium ${variacion >= 0 ? 'text-[var(--exito)]' : 'text-[var(--error)]'}`}
@@ -523,6 +554,9 @@ export default function InformeEjecutivo() {
                   {variacion >= 0 ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
                   {variacion >= 0 ? '+' : ''}
                   {variacion}% vs. periodo anterior ({totalPrevio})
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  Periodo anterior: {formatearFecha(rangoAnterior.prevDesde)} – {formatearFecha(rangoAnterior.prevHasta)} (misma duración, inmediatamente antes)
                 </div>
               </CardContent>
             </Card>
@@ -542,7 +576,15 @@ export default function InformeEjecutivo() {
 
             <Card>
               <CardContent className="flex h-full flex-col items-center justify-center gap-0.5 p-3">
-                <div className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cumplimiento del checklist</div>
+                <div className="mb-0.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Cumplimiento del checklist
+                  <span
+                    className="cursor-help text-muted-foreground/70"
+                    title="% = Cumple ÷ (Cumple + No Cumple) × 100. No incluye las respuestas 'No Aplica'."
+                  >
+                    <HelpCircle className="size-3" />
+                  </span>
+                </div>
                 <AnilloSimple pct={cumplimiento.pct} color={colorCumplimiento} tamano={80} grosor={9}>
                   <span className="text-base font-extrabold tabular" style={{ color: colorCumplimiento }}>
                     {cumplimiento.pct}%
@@ -590,11 +632,12 @@ export default function InformeEjecutivo() {
                     return (
                       <div
                         key={i}
-                        className={`flex aspect-square items-center justify-center rounded text-[10px] font-medium ${n ? 'cursor-pointer' : ''}`}
+                        className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded text-[10px] font-medium leading-none ${n ? 'cursor-pointer' : ''}`}
                         style={{ background: CAL_ESCALA[nivel], color: nivel >= 3 ? 'white' : 'var(--foreground)' }}
                         onClick={(e) => n && abrirPopover(setPopover, e, `${c.dia} de ${format(new Date(mesCal.y, mesCal.m, 1), 'MMMM', { locale: es })} · ${n} inspección(es)`, COLUMNAS_POPOVER, c.registros)}
                       >
-                        {c.dia}
+                        <span>{c.dia}</span>
+                        {n > 0 && <span className="text-[8px] font-bold opacity-90">{n}</span>}
                       </div>
                     )
                   })}
@@ -682,8 +725,8 @@ export default function InformeEjecutivo() {
                   {rankingEmpresas.length === 0 ? (
                     <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin hallazgos registrados en el periodo.</p>
                   ) : (
-                    <div className="min-h-0 flex-1">
-                      <ResponsiveContainer width="100%" height="100%" minHeight={70}>
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      <ResponsiveContainer width="100%" height={Math.max(90, rankingEmpresas.length * 26)}>
                         <BarChart data={rankingEmpresas} layout="vertical" margin={{ left: 0, right: 24, top: 4, bottom: 4 }}>
                           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
                           <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
@@ -711,7 +754,12 @@ export default function InformeEjecutivo() {
         </div>
       )}
 
-      <PopoverDetalle popover={popover} onClose={() => setPopover(null)} getKey={(r) => r.id} />
+      <PopoverDetalle
+        popover={popover}
+        onClose={() => setPopover(null)}
+        getKey={(r) => r.id}
+        onFilaClick={(r) => navigate(`/inspecciones/${r.id}`)}
+      />
     </div>
   )
 }
