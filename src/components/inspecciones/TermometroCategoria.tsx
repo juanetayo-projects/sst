@@ -1,4 +1,4 @@
-import type { Pregunta } from "@/domain/inspecciones";
+import { calcularDistribucionRespuestas, type Pregunta } from "@/domain/inspecciones";
 
 const COLOR_VALOR: Record<string, string> = {
   Cumple: "var(--exito)",
@@ -7,8 +7,6 @@ const COLOR_VALOR: Record<string, string> = {
   No: "var(--error)",
   "No Aplica": "var(--neutro)",
 };
-
-const ORDEN_VALOR = ["Cumple", "Sí", "No Cumple", "No", "No Aplica"];
 
 function colorPara(valor: string, indice: number): string {
   if (COLOR_VALOR[valor]) return COLOR_VALOR[valor];
@@ -63,32 +61,11 @@ export function TermometroCategoria({
   preguntas: Pregunta[];
   respuestas: Record<string, string>;
 }) {
-  const conteo = new Map<string, number>();
-  for (const p of preguntas) {
-    if (p.tipo_campo !== "opcion" && p.tipo_campo !== "booleano") continue;
-    const valor = respuestas[p.id];
-    if (!valor) continue;
-    conteo.set(valor, (conteo.get(valor) ?? 0) + 1);
-  }
-
-  const total = Array.from(conteo.values()).reduce((a, b) => a + b, 0);
+  const distribucion = calcularDistribucionRespuestas(preguntas, respuestas);
+  const total = distribucion.reduce((a, d) => a + d.cantidad, 0);
   if (total === 0) return null;
 
-  const filas = Array.from(conteo.entries())
-    .sort(([a], [b]) => {
-      const ia = ORDEN_VALOR.indexOf(a);
-      const ib = ORDEN_VALOR.indexOf(b);
-      if (ia === -1 && ib === -1) return a.localeCompare(b);
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
-      return ia - ib;
-    })
-    .map(([valor, cantidad], i) => ({
-      valor,
-      cantidad,
-      pct: Math.round((cantidad / total) * 100),
-      color: colorPara(valor, i),
-    }));
+  const filas = distribucion.map((d, i) => ({ ...d, color: colorPara(d.valor, i) }));
 
   return (
     <div className="mb-3 flex flex-wrap items-end justify-center gap-5 rounded-lg border border-border/60 bg-card/60 px-4 py-3">

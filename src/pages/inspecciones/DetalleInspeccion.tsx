@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import {
   cargarEstructuraInspeccion,
   categoriaEsVisible,
+  calcularDistribucionRespuestas,
   type EstructuraInspeccion,
 } from "@/domain/inspecciones";
 import { exportarInspeccionPDF, type SeccionPDF } from "@/lib/exportar";
@@ -84,13 +85,17 @@ export default function DetalleInspeccion() {
     const categoriasVisibles = estructura.categorias.filter((c) =>
       categoriaEsVisible(c, estructura.encabezado, respuestas),
     );
-    const secciones: SeccionPDF[] = categoriasVisibles.map((cat) => ({
-      titulo: cat.nombre,
-      color: COLOR_HEX_BLOQUE[cat.color as keyof typeof COLOR_HEX_BLOQUE] ?? "#0D2D6B",
-      filas: (estructura.porCategoria.get(cat.id) ?? [])
-        .filter((p) => respuestas[p.id])
-        .map((p) => [p.texto, respuestas[p.id]] as [string, string]),
-    }));
+    const secciones: SeccionPDF[] = categoriasVisibles.map((cat) => {
+      const preguntasCategoria = estructura.porCategoria.get(cat.id) ?? [];
+      return {
+        titulo: cat.nombre,
+        color: COLOR_HEX_BLOQUE[cat.color as keyof typeof COLOR_HEX_BLOQUE] ?? "#0D2D6B",
+        filas: preguntasCategoria
+          .filter((p) => respuestas[p.id])
+          .map((p) => [p.texto, respuestas[p.id]] as [string, string]),
+        termometro: calcularDistribucionRespuestas(preguntasCategoria, respuestas),
+      };
+    });
 
     await exportarInspeccionPDF({
       titulo: inspeccion.tipos_inspeccion.nombre,

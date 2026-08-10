@@ -19,7 +19,7 @@ type Perfil = {
   id: string
   email: string
   nombre_completo: string
-  role: 'admin' | 'inspector'
+  role: 'admin' | 'inspector' | 'encuestador'
   activo: boolean
 }
 
@@ -33,7 +33,7 @@ export default function Usuarios() {
   const [password, setPassword] = useState('')
   const [confirmarPassword, setConfirmarPassword] = useState('')
   const [nombreCompleto, setNombreCompleto] = useState('')
-  const [role, setRole] = useState<'admin' | 'inspector'>('inspector')
+  const [role, setRole] = useState<'admin' | 'inspector' | 'encuestador'>('inspector')
   const [creando, setCreando] = useState(false)
 
   const [reseteando, setReseteando] = useState<Perfil | null>(null)
@@ -85,7 +85,7 @@ export default function Usuarios() {
     cargar()
   }
 
-  async function cambiarRol(u: Perfil, nuevoRole: 'admin' | 'inspector') {
+  async function cambiarRol(u: Perfil, nuevoRole: 'admin' | 'inspector' | 'encuestador') {
     await supabase.from('profiles').update({ role: nuevoRole }).eq('id', u.id)
     cargar()
   }
@@ -183,13 +183,14 @@ export default function Usuarios() {
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">{u.email}</td>
                     <td className="px-3 py-2">
-                      <Select value={u.role} onValueChange={(v) => cambiarRol(u, v as 'admin' | 'inspector')}>
-                        <SelectTrigger className="h-8 w-32 text-xs">
+                      <Select value={u.role} onValueChange={(v) => cambiarRol(u, v as 'admin' | 'inspector' | 'encuestador')}>
+                        <SelectTrigger className="h-8 w-36 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="admin">Administrador</SelectItem>
                           <SelectItem value="inspector">Inspector</SelectItem>
+                          <SelectItem value="encuestador">Encuestador</SelectItem>
                         </SelectContent>
                       </Select>
                     </td>
@@ -266,10 +267,11 @@ export default function Usuarios() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="nuevo-role">Rol</Label>
-                <Select value={role} onValueChange={(v) => setRole(v as 'admin' | 'inspector')}>
+                <Select value={role} onValueChange={(v) => setRole(v as 'admin' | 'inspector' | 'encuestador')}>
                   <SelectTrigger id="nuevo-role"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="inspector">Inspector</SelectItem>
+                    <SelectItem value="encuestador">Encuestador</SelectItem>
                     <SelectItem value="admin">Administrador</SelectItem>
                   </SelectContent>
                 </Select>

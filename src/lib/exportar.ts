@@ -115,7 +115,62 @@ export async function exportarListaPDF(opts: {
     .download(`${opts.nombreArchivo}.pdf`)
 }
 
-export type SeccionPDF = { titulo: string; color: string; filas: [string, string][] }
+export type DistribucionRespuestaPDF = { valor: string; cantidad: number; pct: number }
+export type SeccionPDF = { titulo: string; color: string; filas: [string, string][]; termometro?: DistribucionRespuestaPDF[] }
+
+const COLOR_HEX_VALOR: Record<string, string> = {
+  Cumple: '#0F9D58',
+  Sí: '#0F9D58',
+  'No Cumple': '#D93025',
+  No: '#D93025',
+  'No Aplica': '#64748B',
+}
+const PALETA_HEX_RESPALDO = ['#16468E', '#F4B400', '#4B7BC8']
+
+function colorHexPara(valor: string, indice: number): string {
+  return COLOR_HEX_VALOR[valor] ?? PALETA_HEX_RESPALDO[indice % PALETA_HEX_RESPALDO.length]
+}
+
+const ALTURA_TUBO_TERMOMETRO = 32
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function construirTermometroPDF(termometro: DistribucionRespuestaPDF[]): any {
+  const total = termometro.reduce((a, d) => a + d.cantidad, 0)
+  return {
+    columns: [
+      ...termometro.map((d, i) => {
+        const color = colorHexPara(d.valor, i)
+        const alturaFill = Math.max(d.pct > 0 ? 4 : 0, Math.round((d.pct / 100) * ALTURA_TUBO_TERMOMETRO))
+        return {
+          width: 62,
+          stack: [
+            { text: `${d.pct}%`, alignment: 'center', fontSize: 8, bold: true, color },
+            {
+              canvas: [
+                { type: 'rect', x: 24, y: 0, w: 8, h: ALTURA_TUBO_TERMOMETRO, color: '#E2E8F0', r: 4 },
+                { type: 'rect', x: 24, y: ALTURA_TUBO_TERMOMETRO - alturaFill, w: 8, h: alturaFill, color, r: 4 },
+                { type: 'ellipse', x: 28, y: ALTURA_TUBO_TERMOMETRO + 6, r1: 5, r2: 5, color },
+              ],
+              margin: [0, 2, 0, 12],
+            },
+            { text: String(d.cantidad), alignment: 'center', fontSize: 8, bold: true },
+            { text: d.valor, alignment: 'center', fontSize: 6.5, color: '#64748B' },
+          ],
+        }
+      }),
+      {
+        width: '*',
+        text: `${total} respuesta${total === 1 ? '' : 's'}`,
+        fontSize: 7,
+        italics: true,
+        color: '#64748B',
+        alignment: 'right',
+        margin: [0, ALTURA_TUBO_TERMOMETRO / 2 - 4, 0, 0],
+      },
+    ],
+    margin: [0, 2, 0, 6],
+  }
+}
 
 /** Reporte detallado de una inspección: encabezado + bloques de categoría con colores institucionales. */
 export async function exportarInspeccionPDF(datos: {
@@ -144,6 +199,7 @@ export async function exportarInspeccionPDF(datos: {
 
   for (const sec of datos.secciones) {
     content.push({ text: sec.titulo, style: 'seccion', color: sec.color, margin: [0, 10, 0, 4] })
+    if (sec.termometro && sec.termometro.length > 0) content.push(construirTermometroPDF(sec.termometro))
     content.push({
       table: {
         widths: ['*', 80],

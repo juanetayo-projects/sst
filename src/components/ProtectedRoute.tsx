@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button'
 export function ProtectedRoute({
   children,
   soloAdmin = false,
+  ocultarAEncuestador = false,
 }: {
   children: React.ReactNode
   soloAdmin?: boolean
+  ocultarAEncuestador?: boolean
 }) {
   const { session, perfil, loading } = useAuth()
 
@@ -33,6 +35,7 @@ export function ProtectedRoute({
     )
   }
   if (soloAdmin && perfil && perfil.role !== 'admin') return <Navigate to="/" replace />
+  if (ocultarAEncuestador && perfil?.role === 'encuestador') return <Navigate to="/" replace />
 
   return <>{children}</>
 }

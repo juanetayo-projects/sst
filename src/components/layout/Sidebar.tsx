@@ -81,7 +81,7 @@ export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {NAV_ITEMS.map((item) => (
+          {NAV_ITEMS.filter((item) => item.to !== '/informe-ejecutivo' || perfil?.role !== 'encuestador').map((item) => (
             <ItemNav key={item.to} {...item} onClick={onCerrar} />
           ))}
 

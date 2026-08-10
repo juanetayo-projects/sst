@@ -5,12 +5,15 @@ import { es } from 'date-fns/locale'
 import { AlertTriangle, CalendarClock, FileClock, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import { supabase } from '@/lib/supabase'
+import type { TipoInspeccion } from '@/domain/inspecciones'
 import { CATEGORIAS_SST, COLOR_HEX_BLOQUE, obtenerCategoriaSST } from '@/domain/categoriasSST'
 import { formatearFecha } from '@/lib/utils'
-import { PageHeader } from '@/components/ui'
+import { PageHeader, FilterBar } from '@/components/ui'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 type FilaInspeccion = {
   id: string
@@ -30,6 +33,7 @@ const CONFORME = new Set(['Cumple', 'Sí'])
 const NO_CONFORME = new Set(['No Cumple', 'No'])
 const VENTANA_VENCIMIENTO_DIAS = 30
 const VENTANA_BORRADOR_DIAS = 7
+const TODOS = '__todos__'
 
 // ─────────────────────────── Piezas reutilizables ───────────────────────────
 
@@ -229,6 +233,15 @@ export default function InformeEjecutivo() {
   const [respuestasOpcion, setRespuestasOpcion] = useState<FilaRespuesta[]>([])
   const [ultimaPorCategoria, setUltimaPorCategoria] = useState<Map<string, string>>(new Map())
 
+  const [tipos, setTipos] = useState<TipoInspeccion[]>([])
+  const [empresas, setEmpresas] = useState<string[]>([])
+  const [sedes, setSedes] = useState<string[]>([])
+  const [tipoId, setTipoId] = useState(TODOS)
+  const [empresa, setEmpresa] = useState(TODOS)
+  const [sede, setSede] = useState(TODOS)
+  const [estado, setEstado] = useState(TODOS)
+  const [soloUrgentes, setSoloUrgentes] = useState(false)
+
   const [hasta, setHasta] = useState(() => new Date().toISOString().slice(0, 10))
   const [desde, setDesde] = useState(() => {
     const d = new Date()
@@ -244,31 +257,65 @@ export default function InformeEjecutivo() {
   const [popover, setPopover] = useState<PopoverState<FilaInspeccion>>(null)
 
   useEffect(() => {
+    Promise.all([
+      supabase.from('tipos_inspeccion').select('*').eq('activo', true).order('orden'),
+      supabase.from('empresas').select('nombre').eq('activo', true).order('orden'),
+      supabase.from('sedes').select('nombre').eq('activo', true).order('orden'),
+    ]).then(([tiposRes, empresasRes, sedesRes]) => {
+      setTipos((tiposRes.data ?? []) as TipoInspeccion[])
+      setEmpresas((empresasRes.data ?? []).map((e) => e.nombre))
+      setSedes((sedesRes.data ?? []).map((s) => s.nombre))
+    })
+  }, [])
+
+  useEffect(() => {
     setCargando(true)
     const dias = Math.max(1, Math.round((parseISO(hasta).getTime() - parseISO(desde).getTime()) / 86400000) + 1)
     const prevHasta = format(addDays(parseISO(desde), -1), 'yyyy-MM-dd')
     const prevDesde = format(addDays(parseISO(prevHasta), -(dias - 1)), 'yyyy-MM-dd')
 
+    let consultaActual = supabase
+      .from('inspecciones')
+      .select('id,empresa,sede,fecha_inspeccion,estado,urgente,created_at,tipo_inspeccion_id,tipos_inspeccion(codigo,nombre)')
+      .gte('fecha_inspeccion', desde)
+      .lte('fecha_inspeccion', hasta)
+    let consultaPrevia = supabase
+      .from('inspecciones')
+      .select('id,empresa,sede,fecha_inspeccion,estado,urgente,created_at,tipo_inspeccion_id,tipos_inspeccion(codigo,nombre)')
+      .gte('fecha_inspeccion', prevDesde)
+      .lte('fecha_inspeccion', prevHasta)
+    let consultaHistorico = supabase
+      .from('inspecciones')
+      .select('tipo_inspeccion_id,fecha_inspeccion,tipos_inspeccion(codigo)')
+      .eq('estado', 'completada')
+
+    if (tipoId !== TODOS) {
+      consultaActual = consultaActual.eq('tipo_inspeccion_id', tipoId)
+      consultaPrevia = consultaPrevia.eq('tipo_inspeccion_id', tipoId)
+    }
+    if (empresa !== TODOS) {
+      consultaActual = consultaActual.eq('empresa', empresa)
+      consultaPrevia = consultaPrevia.eq('empresa', empresa)
+      consultaHistorico = consultaHistorico.eq('empresa', empresa)
+    }
+    if (sede !== TODOS) {
+      consultaActual = consultaActual.eq('sede', sede)
+      consultaPrevia = consultaPrevia.eq('sede', sede)
+      consultaHistorico = consultaHistorico.eq('sede', sede)
+    }
+    if (estado !== TODOS) {
+      consultaActual = consultaActual.eq('estado', estado)
+      consultaPrevia = consultaPrevia.eq('estado', estado)
+    }
+    if (soloUrgentes) {
+      consultaActual = consultaActual.eq('urgente', true)
+      consultaPrevia = consultaPrevia.eq('urgente', true)
+    }
+
     Promise.all([
-      supabase
-        .from('inspecciones')
-        .select('id,empresa,sede,fecha_inspeccion,estado,urgente,created_at,tipo_inspeccion_id,tipos_inspeccion(codigo,nombre)')
-        .gte('fecha_inspeccion', desde)
-        .lte('fecha_inspeccion', hasta)
-        .order('fecha_inspeccion', { ascending: true })
-        .limit(3000),
-      supabase
-        .from('inspecciones')
-        .select('id,empresa,sede,fecha_inspeccion,estado,urgente,created_at,tipo_inspeccion_id,tipos_inspeccion(codigo,nombre)')
-        .gte('fecha_inspeccion', prevDesde)
-        .lte('fecha_inspeccion', prevHasta)
-        .limit(3000),
-      supabase
-        .from('inspecciones')
-        .select('tipo_inspeccion_id,fecha_inspeccion,tipos_inspeccion(codigo)')
-        .eq('estado', 'completada')
-        .order('fecha_inspeccion', { ascending: false })
-        .limit(3000),
+      consultaActual.order('fecha_inspeccion', { ascending: true }).limit(3000),
+      consultaPrevia.limit(3000),
+      consultaHistorico.order('fecha_inspeccion', { ascending: false }).limit(3000),
     ]).then(([actualRes, prevRes, historicoRes]) => {
       const actual = (actualRes.data ?? []) as unknown as FilaInspeccion[]
       setFilas(actual)
@@ -297,7 +344,7 @@ export default function InformeEjecutivo() {
           setCargando(false)
         })
     })
-  }, [desde, hasta])
+  }, [desde, hasta, tipoId, empresa, sede, estado, soloUrgentes])
 
   // ── Resumen del periodo ──
   const totalActual = filas.length
@@ -389,28 +436,85 @@ export default function InformeEjecutivo() {
   }, [filas, respuestasOpcion])
 
   return (
-    <div>
+    <div className="flex flex-col lg:h-[calc(100vh-7.25rem)] lg:overflow-hidden">
       <PageHeader titulo="Informe Ejecutivo" />
 
-      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-3 shadow-relieve-sm">
+      <FilterBar className="mb-3 shrink-0">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Tipo</Label>
+          <Select value={tipoId} onValueChange={setTipoId}>
+            <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODOS}>Todos los tipos</SelectItem>
+              {tipos.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Empresa</Label>
+          <Select value={empresa} onValueChange={setEmpresa}>
+            <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODOS}>Todas</SelectItem>
+              {empresas.map((e) => (
+                <SelectItem key={e} value={e}>
+                  {e}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Sede</Label>
+          <Select value={sede} onValueChange={setSede}>
+            <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODOS}>Todas</SelectItem>
+              {sedes.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Estado</Label>
+          <Select value={estado} onValueChange={setEstado}>
+            <SelectTrigger className="h-8 w-28 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODOS}>Todos</SelectItem>
+              <SelectItem value="completada">Completada</SelectItem>
+              <SelectItem value="borrador">Borrador</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Desde</Label>
-          <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="w-36" />
+          <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="h-8 w-32 text-xs" />
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Hasta</Label>
-          <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="w-36" />
+          <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="h-8 w-32 text-xs" />
         </div>
-      </div>
+        <label className="flex items-center gap-2 pb-1.5 text-xs">
+          <Checkbox checked={soloUrgentes} onCheckedChange={(v) => setSoloUrgentes(v === true)} />
+          Solo urgentes
+        </label>
+      </FilterBar>
 
       {cargando ? (
         <div className="p-8 text-center text-sm text-muted-foreground">Cargando…</div>
       ) : (
-        <div className="space-y-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
           {/* Fila 1 */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid shrink-0 grid-cols-1 gap-3 lg:grid-cols-3">
             <Card>
-              <CardContent className="flex h-full flex-col justify-center gap-1 p-5">
+              <CardContent className="flex h-full flex-col justify-center gap-1 p-4">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Inspecciones del periodo</div>
                 <div className="text-3xl font-extrabold tabular text-[var(--cac-azul)]">{totalActual}</div>
                 <div
@@ -425,8 +529,8 @@ export default function InformeEjecutivo() {
 
             <Card className="lg:col-span-1">
               <CardContent className="p-4">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tendencia</div>
-                <ResponsiveContainer width="100%" height={120}>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tendencia</div>
+                <ResponsiveContainer width="100%" height={84}>
                   <BarChart data={serieTemporal} margin={{ left: 0, right: 8, top: 4, bottom: 0 }}>
                     <XAxis dataKey="label" tick={{ fontSize: 9 }} interval="preserveStartEnd" />
                     <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }} formatter={(v: number) => [v, 'Inspecciones']} />
@@ -437,10 +541,10 @@ export default function InformeEjecutivo() {
             </Card>
 
             <Card>
-              <CardContent className="flex h-full flex-col items-center justify-center gap-1 p-4">
-                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cumplimiento del checklist</div>
-                <AnilloSimple pct={cumplimiento.pct} color={colorCumplimiento}>
-                  <span className="text-xl font-extrabold tabular" style={{ color: colorCumplimiento }}>
+              <CardContent className="flex h-full flex-col items-center justify-center gap-0.5 p-3">
+                <div className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cumplimiento del checklist</div>
+                <AnilloSimple pct={cumplimiento.pct} color={colorCumplimiento} tamano={80} grosor={9}>
+                  <span className="text-base font-extrabold tabular" style={{ color: colorCumplimiento }}>
                     {cumplimiento.pct}%
                   </span>
                 </AnilloSimple>
@@ -452,9 +556,9 @@ export default function InformeEjecutivo() {
           </div>
 
           {/* Fila 2 */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch">
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-3 lg:items-stretch">
             <Card>
-              <CardContent className="p-4">
+              <CardContent className="flex h-full flex-col p-4">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Calendario de actividad</div>
                   <div className="flex items-center gap-1 text-xs">
@@ -478,7 +582,7 @@ export default function InformeEjecutivo() {
                     <div key={d}>{d}</div>
                   ))}
                 </div>
-                <div className="mt-1 grid grid-cols-7 gap-1">
+                <div className="mt-1 grid flex-1 grid-cols-7 content-center gap-1">
                   {cal.celdas.map((c, i) => {
                     if (!c) return <div key={i} />
                     const n = c.registros.length
@@ -499,16 +603,18 @@ export default function InformeEjecutivo() {
             </Card>
 
             <Card>
-              <CardContent className="flex flex-col items-center gap-3 p-4">
+              <CardContent className="flex h-full flex-col items-center gap-2 p-4">
                 <div className="self-start text-xs font-semibold uppercase tracking-wide text-muted-foreground">Distribución por ronda</div>
                 <AnillosConcentricos
+                  tamano={132}
+                  grosor={11}
                   datos={porRonda.map((r) => ({ nombre: r.categoria.nombre, valor: r.registros.length, color: COLOR_HEX_BLOQUE[r.categoria.color] }))}
                   onSegmentClick={(nombre, e) => {
                     const r = porRonda.find((x) => x.categoria.nombre === nombre)
                     if (r) abrirPopover(setPopover, e, nombre, COLUMNAS_POPOVER, r.registros)
                   }}
                 />
-                <div className="grid w-full grid-cols-1 gap-1 text-xs">
+                <div className="grid w-full flex-1 grid-cols-1 content-start gap-1 overflow-y-auto text-xs">
                   {porRonda.map((r) => (
                     <button
                       key={r.categoria.id}
@@ -526,15 +632,15 @@ export default function InformeEjecutivo() {
               </CardContent>
             </Card>
 
-            <div className="flex flex-col gap-4">
-              <Card className="flex-1">
-                <CardContent className="flex h-full flex-col space-y-3 p-4">
+            <div className="flex min-h-0 flex-col gap-3">
+              <Card className="min-h-0 flex-1">
+                <CardContent className="flex h-full flex-col space-y-2 overflow-y-auto p-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Alertas</div>
 
                   {rondasVencidas.length === 0 && urgentesPeriodo.length === 0 && borradoresViejos.length === 0 ? (
                     <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin alertas activas.</p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {rondasVencidas.map((r) => (
                         <div key={r.categoria.id} className="flex items-start gap-2 rounded-lg bg-[var(--advertencia-suave)] p-2 text-xs">
                           <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-[var(--advertencia)]" />
@@ -570,14 +676,14 @@ export default function InformeEjecutivo() {
                 </CardContent>
               </Card>
 
-              <Card className="flex-1">
-                <CardContent className="flex h-full flex-col p-4">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Empresas con más hallazgos "No Cumple"</div>
+              <Card className="min-h-0 flex-1">
+                <CardContent className="flex h-full flex-col p-3">
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Empresas con más hallazgos "No Cumple"</div>
                   {rankingEmpresas.length === 0 ? (
                     <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin hallazgos registrados en el periodo.</p>
                   ) : (
                     <div className="min-h-0 flex-1">
-                      <ResponsiveContainer width="100%" height="100%" minHeight={120}>
+                      <ResponsiveContainer width="100%" height="100%" minHeight={70}>
                         <BarChart data={rankingEmpresas} layout="vertical" margin={{ left: 0, right: 24, top: 4, bottom: 4 }}>
                           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
                           <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
@@ -595,7 +701,7 @@ export default function InformeEjecutivo() {
             </div>
           </div>
 
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="shrink-0 text-center text-[10px] text-muted-foreground">
             ¿Buscas una inspección puntual? Consulta el{' '}
             <Link to="/inspecciones" className="font-medium text-[var(--cac-azul)] hover:underline">
               Historial

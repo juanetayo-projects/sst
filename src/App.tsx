@@ -35,7 +35,14 @@ export default function App() {
             <Route index element={<DashboardPage />} />
             <Route path="inspecciones" element={<Historial />} />
             <Route path="estadisticas" element={<Estadisticas />} />
-            <Route path="informe-ejecutivo" element={<InformeEjecutivo />} />
+            <Route
+              path="informe-ejecutivo"
+              element={
+                <ProtectedRoute ocultarAEncuestador>
+                  <InformeEjecutivo />
+                </ProtectedRoute>
+              }
+            />
             <Route path="infografia" element={<Infografia />} />
             <Route path="inspecciones/nueva" element={<SeleccionarTipoInspeccion />} />
             <Route path="inspecciones/nueva/:codigo" element={<FormularioInspeccion />} />

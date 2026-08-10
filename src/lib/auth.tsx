@@ -6,7 +6,7 @@ export type Perfil = {
   id: string
   email: string
   nombre_completo: string
-  role: 'admin' | 'inspector'
+  role: 'admin' | 'inspector' | 'encuestador'
   activo: boolean
 }
 

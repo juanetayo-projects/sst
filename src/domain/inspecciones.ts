@@ -136,6 +136,35 @@ export function categoriaEsVisible(
   return respuestas[preguntaControl.id] === categoria.condicion_valor
 }
 
+const ORDEN_VALOR_RESPUESTA = ['Cumple', 'Sí', 'No Cumple', 'No', 'No Aplica']
+
+export type DistribucionRespuesta = { valor: string; cantidad: number; pct: number }
+
+/** Cantidad y % de respuestas por tipo (Cumple/No Cumple/No Aplica, Sí/No), para las preguntas de opción/booleano de un grupo. */
+export function calcularDistribucionRespuestas(preguntas: Pregunta[], respuestas: Record<string, string>): DistribucionRespuesta[] {
+  const conteo = new Map<string, number>()
+  for (const p of preguntas) {
+    if (p.tipo_campo !== 'opcion' && p.tipo_campo !== 'booleano') continue
+    const valor = respuestas[p.id]
+    if (!valor) continue
+    conteo.set(valor, (conteo.get(valor) ?? 0) + 1)
+  }
+
+  const total = Array.from(conteo.values()).reduce((a, b) => a + b, 0)
+  if (total === 0) return []
+
+  return Array.from(conteo.entries())
+    .sort(([a], [b]) => {
+      const ia = ORDEN_VALOR_RESPUESTA.indexOf(a)
+      const ib = ORDEN_VALOR_RESPUESTA.indexOf(b)
+      if (ia === -1 && ib === -1) return a.localeCompare(b)
+      if (ia === -1) return 1
+      if (ib === -1) return -1
+      return ia - ib
+    })
+    .map(([valor, cantidad]) => ({ valor, cantidad, pct: Math.round((cantidad / total) * 100) }))
+}
+
 /** Detecta las preguntas de cierre estándar (A1-A4) para poblar las columnas dedicadas de `inspecciones`. */
 export function mapearCierreAColumnas(cierre: Pregunta[], respuestas: Record<string, string>) {
   let fortalezas: string | null = null

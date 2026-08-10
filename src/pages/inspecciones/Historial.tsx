@@ -92,6 +92,7 @@ export default function Historial() {
   function puedeEditar(f: FilaInspeccion) {
     if (!perfil) return false
     if (perfil.role === 'admin') return true
+    if (perfil.role !== 'inspector') return false
     return f.inspector_id === perfil.id && f.estado === 'borrador'
   }
 
