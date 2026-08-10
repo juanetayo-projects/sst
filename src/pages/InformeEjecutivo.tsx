@@ -645,7 +645,7 @@ export default function InformeEjecutivo() {
                         <span className="opacity-80">{c.dia}</span>
                         {n > 0 && (
                           <span
-                            className="absolute bottom-0.5 right-0.5 flex min-w-[15px] items-center justify-center rounded-full px-1 py-px text-[9px] font-bold text-white shadow-sm"
+                            className="absolute bottom-0 right-0 flex min-w-[18px] items-center justify-center rounded-full px-1 py-0.5 text-[13px] font-extrabold leading-none text-white shadow-sm"
                             style={{ backgroundColor: 'var(--cac-azul-800)' }}
                           >
                             {n}
