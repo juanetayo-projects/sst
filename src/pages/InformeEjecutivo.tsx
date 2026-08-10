@@ -270,6 +270,12 @@ export default function InformeEjecutivo() {
     return { y: d.getFullYear(), m: d.getMonth() }
   })
 
+  // El calendario sigue al filtro de fechas: al cambiar "Hasta" salta a ese mes (el usuario puede seguir navegando con ‹ ›).
+  useEffect(() => {
+    const d = parseISO(hasta)
+    setMesCal({ y: d.getFullYear(), m: d.getMonth() })
+  }, [hasta])
+
   const [popover, setPopover] = useState<PopoverState<FilaInspeccion>>(null)
 
   useEffect(() => {
@@ -632,12 +638,19 @@ export default function InformeEjecutivo() {
                     return (
                       <div
                         key={i}
-                        className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded text-[10px] font-medium leading-none ${n ? 'cursor-pointer' : ''}`}
+                        className={`relative flex aspect-square items-start justify-start rounded p-1 text-[10px] font-medium ${n ? 'cursor-pointer' : ''}`}
                         style={{ background: CAL_ESCALA[nivel], color: nivel >= 3 ? 'white' : 'var(--foreground)' }}
                         onClick={(e) => n && abrirPopover(setPopover, e, `${c.dia} de ${format(new Date(mesCal.y, mesCal.m, 1), 'MMMM', { locale: es })} · ${n} inspección(es)`, COLUMNAS_POPOVER, c.registros)}
                       >
-                        <span>{c.dia}</span>
-                        {n > 0 && <span className="text-[8px] font-bold opacity-90">{n}</span>}
+                        <span className="opacity-80">{c.dia}</span>
+                        {n > 0 && (
+                          <span
+                            className="absolute bottom-0.5 right-0.5 flex min-w-[15px] items-center justify-center rounded-full px-1 py-px text-[9px] font-bold text-white shadow-sm"
+                            style={{ backgroundColor: 'var(--cac-azul-800)' }}
+                          >
+                            {n}
+                          </span>
+                        )}
                       </div>
                     )
                   })}
