@@ -172,17 +172,24 @@ export default function SeleccionarTipoInspeccion() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-7">
-              {grupos.map((grupo) => (
-                <TarjetaSeleccion
-                  key={grupo.categoria.id}
-                  color={grupo.categoria.color}
-                  imagenIcono={`${import.meta.env.BASE_URL}images/iconos-categorias/${grupo.categoria.iconoImg}`}
-                  titulo={grupo.categoria.nombre}
-                  subtitulo={grupo.categoria.objetivo}
-                  onClick={() => elegirCategoria(grupo)}
-                />
-              ))}
+            <div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-7">
+                {grupos.map((grupo) => (
+                  <TarjetaSeleccion
+                    key={grupo.categoria.id}
+                    color={grupo.categoria.color}
+                    imagenIcono={`${import.meta.env.BASE_URL}images/iconos-categorias/${grupo.categoria.iconoImg}`}
+                    titulo={grupo.categoria.nombre}
+                    subtitulo={grupo.categoria.objetivo}
+                    onClick={() => elegirCategoria(grupo)}
+                  />
+                ))}
+              </div>
+              <img
+                src={`${import.meta.env.BASE_URL}images/banner.png`}
+                alt=""
+                className="mt-4 w-full rounded-xl border border-border sm:mt-5"
+              />
             </div>
           )}
 
