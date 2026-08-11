@@ -319,20 +319,19 @@
     text-transform: uppercase;
   }
 
-  /* Tarjeta de selección de categoría/ronda: sombra difusa teñida con el acento de la categoría, estilo modelo_cards */
+  /* Tarjeta de selección de categoría/ronda: borde de línea neutro que se acentúa con el color de la categoría al interactuar */
   .tarjeta-categoria {
-    box-shadow:
-      0 2px 4px -1px color-mix(in srgb, var(--bloque-acento, var(--cac-azul-600)) 25%, transparent),
-      0 22px 34px -14px color-mix(in srgb, var(--bloque-acento, var(--cac-azul-600)) 60%, transparent);
+    box-shadow: 0 1px 2px 0 color-mix(in srgb, #0f172a 6%, transparent);
     transition:
-      box-shadow 0.25s ease,
-      transform 0.25s ease;
+      box-shadow 0.2s ease,
+      border-color 0.2s ease,
+      transform 0.2s ease;
   }
 
   .tarjeta-categoria:hover {
     box-shadow:
-      0 3px 6px -1px color-mix(in srgb, var(--bloque-acento, var(--cac-azul-600)) 30%, transparent),
-      0 28px 42px -14px color-mix(in srgb, var(--bloque-acento, var(--cac-azul-600)) 70%, transparent);
+      0 2px 4px -1px color-mix(in srgb, var(--bloque-acento, var(--cac-azul-600)) 12%, transparent),
+      0 8px 16px -6px color-mix(in srgb, var(--bloque-acento, var(--cac-azul-600)) 22%, transparent);
   }
 
   .bloque-azul {

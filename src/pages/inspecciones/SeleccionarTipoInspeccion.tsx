@@ -66,30 +66,21 @@ function TarjetaSeleccion({
     <button
       type="button"
       onClick={onClick}
-      className={`bloque-${color} tarjeta-categoria group flex h-full min-w-0 flex-col items-center gap-3 rounded-2xl border-2 bg-[var(--bloque-fondo)] p-3 text-center transition-all hover:-translate-y-0.5 sm:p-4`}
-      style={{ borderColor: 'var(--bloque-borde)' }}
+      className={`bloque-${color} tarjeta-categoria group flex h-full min-w-0 flex-col items-center gap-3 rounded-2xl border border-border bg-card p-4 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--bloque-acento)] sm:p-5`}
     >
-      {/* Panel del icono: caja enmarcada con esquina doblada y barra de color, estilo modelo_cards */}
-      <div
-        className="relative flex w-full flex-col items-center justify-center overflow-hidden rounded-xl border bg-[var(--card)] transition-transform group-hover:scale-[1.03]"
-        style={{ borderColor: 'var(--bloque-borde)' }}
+      {/* Insignia circular con tinte suave del color de categoría — sin bandas internas */}
+      <span
+        className="flex size-14 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105 sm:size-16"
+        style={{ backgroundColor: 'var(--bloque-fondo)' }}
       >
-        <span
-          aria-hidden
-          className="absolute right-0 top-0 size-6 sm:size-7"
-          style={{ background: acento, clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }}
-        />
-        <div className="flex flex-1 items-center justify-center py-5 sm:py-7">
-          {imagenIcono ? (
-            <img src={imagenIcono} alt="" className="size-12 object-contain sm:size-14" />
-          ) : Icono ? (
-            <Icono className="size-11 sm:size-12" style={{ color: acento }} strokeWidth={1.75} />
-          ) : null}
-        </div>
-        <span aria-hidden className="h-2.5 w-full shrink-0" style={{ backgroundColor: acento }} />
-      </div>
+        {imagenIcono ? (
+          <img src={imagenIcono} alt="" className="size-8 object-contain sm:size-9" />
+        ) : Icono ? (
+          <Icono className="size-7 sm:size-8" style={{ color: acento }} strokeWidth={1.75} />
+        ) : null}
+      </span>
       <div className="flex min-w-0 flex-1 flex-col items-center justify-start">
-        <span className="block text-sm font-bold leading-snug sm:text-base">{titulo}</span>
+        <span className="block text-sm font-semibold leading-snug text-foreground sm:text-base">{titulo}</span>
         {subtitulo && <p className="mt-1 line-clamp-3 text-xs leading-snug text-muted-foreground sm:text-[13px]">{subtitulo}</p>}
       </div>
     </button>
