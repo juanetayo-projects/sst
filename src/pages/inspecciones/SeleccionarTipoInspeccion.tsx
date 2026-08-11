@@ -52,7 +52,6 @@ function TarjetaSeleccion({
   imagenIcono,
   titulo,
   subtitulo,
-  grande,
   onClick,
 }: {
   color: CategoriaSST['color']
@@ -60,7 +59,6 @@ function TarjetaSeleccion({
   imagenIcono?: string
   titulo: string
   subtitulo?: string
-  grande?: boolean
   onClick: () => void
 }) {
   const acento = COLOR_HEX_BLOQUE[color]
@@ -68,37 +66,31 @@ function TarjetaSeleccion({
     <button
       type="button"
       onClick={onClick}
-      className={`bloque-${color} tarjeta-categoria group flex min-w-0 items-stretch gap-4 rounded-2xl border-2 bg-[var(--bloque-fondo)] text-left transition-all hover:-translate-y-0.5 ${grande ? 'p-4' : 'p-2'}`}
+      className={`bloque-${color} tarjeta-categoria group flex h-full min-w-0 flex-col items-center gap-3 rounded-2xl border-2 bg-[var(--bloque-fondo)] p-3 text-center transition-all hover:-translate-y-0.5 sm:p-4`}
       style={{ borderColor: 'var(--bloque-borde)' }}
     >
       {/* Panel del icono: caja enmarcada con esquina doblada y barra de color, estilo modelo_cards */}
       <div
-        className={`relative flex shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border bg-[var(--card)] transition-transform group-hover:scale-[1.03] ${grande ? 'w-24 sm:w-28' : 'w-16 sm:w-[4.5rem]'}`}
+        className="relative flex w-full flex-col items-center justify-center overflow-hidden rounded-xl border bg-[var(--card)] transition-transform group-hover:scale-[1.03]"
         style={{ borderColor: 'var(--bloque-borde)' }}
       >
         <span
           aria-hidden
-          className={`absolute right-0 top-0 ${grande ? 'size-6 sm:size-7' : 'size-4 sm:size-5'}`}
+          className="absolute right-0 top-0 size-6 sm:size-7"
           style={{ background: acento, clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }}
         />
-        <div className={`flex flex-1 items-center justify-center ${grande ? 'py-4' : 'py-2'}`}>
+        <div className="flex flex-1 items-center justify-center py-5 sm:py-7">
           {imagenIcono ? (
-            <img src={imagenIcono} alt="" className={grande ? 'size-12 object-contain sm:size-14' : 'size-8 object-contain sm:size-9'} />
+            <img src={imagenIcono} alt="" className="size-12 object-contain sm:size-14" />
           ) : Icono ? (
-            <Icono className={grande ? 'size-11 sm:size-12' : 'size-6 sm:size-7'} style={{ color: acento }} strokeWidth={1.75} />
+            <Icono className="size-11 sm:size-12" style={{ color: acento }} strokeWidth={1.75} />
           ) : null}
         </div>
-        <span aria-hidden className={`w-full shrink-0 ${grande ? 'h-2.5' : 'h-1.5'}`} style={{ backgroundColor: acento }} />
+        <span aria-hidden className="h-2.5 w-full shrink-0" style={{ backgroundColor: acento }} />
       </div>
-      <div className="flex min-w-0 flex-col justify-center py-1">
-        <span className={`block font-bold leading-snug ${grande ? 'text-base sm:text-lg' : 'text-xs sm:text-sm'}`}>{titulo}</span>
-        {subtitulo && (
-          <p
-            className={`mt-1 leading-snug text-muted-foreground ${grande ? 'line-clamp-3 text-sm sm:text-base' : 'line-clamp-2 text-[11px] sm:text-xs'}`}
-          >
-            {subtitulo}
-          </p>
-        )}
+      <div className="flex min-w-0 flex-1 flex-col items-center justify-start">
+        <span className="block text-sm font-bold leading-snug sm:text-base">{titulo}</span>
+        {subtitulo && <p className="mt-1 line-clamp-3 text-xs leading-snug text-muted-foreground sm:text-[13px]">{subtitulo}</p>}
       </div>
     </button>
   )
@@ -176,7 +168,7 @@ export default function SeleccionarTipoInspeccion() {
           {cargando ? (
             <div className="p-8 text-center text-sm text-muted-foreground">Cargando…</div>
           ) : grupoActivo ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               {grupoActivo.tipos.map((tipo) => (
                 <TarjetaSeleccion
                   key={tipo.id}
@@ -184,39 +176,22 @@ export default function SeleccionarTipoInspeccion() {
                   icono={ICONOS[tipo.codigo] ?? ShieldAlert}
                   titulo={tipo.nombre}
                   subtitulo={REFERENCIA_TIPO[tipo.codigo]}
-                  grande
                   onClick={() => navigate(`/inspecciones/nueva/${tipo.codigo}`)}
                 />
               ))}
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                {grupos.slice(0, 3).map((grupo) => (
-                  <TarjetaSeleccion
-                    key={grupo.categoria.id}
-                    color={grupo.categoria.color}
-                    imagenIcono={`${import.meta.env.BASE_URL}images/iconos-categorias/${grupo.categoria.iconoImg}`}
-                    titulo={grupo.categoria.nombre}
-                    subtitulo={grupo.categoria.objetivo}
-                    grande
-                    onClick={() => elegirCategoria(grupo)}
-                  />
-                ))}
-              </div>
-              <div className="grid grid-cols-4 gap-4">
-                {grupos.slice(3).map((grupo) => (
-                  <TarjetaSeleccion
-                    key={grupo.categoria.id}
-                    color={grupo.categoria.color}
-                    imagenIcono={`${import.meta.env.BASE_URL}images/iconos-categorias/${grupo.categoria.iconoImg}`}
-                    titulo={grupo.categoria.nombre}
-                    subtitulo={grupo.categoria.objetivo}
-                    grande
-                    onClick={() => elegirCategoria(grupo)}
-                  />
-                ))}
-              </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-7">
+              {grupos.map((grupo) => (
+                <TarjetaSeleccion
+                  key={grupo.categoria.id}
+                  color={grupo.categoria.color}
+                  imagenIcono={`${import.meta.env.BASE_URL}images/iconos-categorias/${grupo.categoria.iconoImg}`}
+                  titulo={grupo.categoria.nombre}
+                  subtitulo={grupo.categoria.objetivo}
+                  onClick={() => elegirCategoria(grupo)}
+                />
+              ))}
             </div>
           )}
 
