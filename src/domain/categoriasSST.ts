@@ -44,6 +44,8 @@ export type CategoriaSST = {
   imagen: string;
   /** Nombre de archivo en `public/images/iconos-categorias/` — ícono isométrico de la categoría. */
   iconoImg: string;
+  /** Nombre de archivo en `public/images/encabezados/` — banner de encabezado del formulario. */
+  imagenEncabezado: string;
 };
 
 /**
@@ -65,6 +67,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     tipos: ["emergencias"],
     imagen: "emergencias.webp",
     iconoImg: "emergencias.png",
+    imagenEncabezado: "emergencias.png",
   },
   {
     id: "incendios",
@@ -77,6 +80,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     tipos: ["extintores"],
     imagen: "incendios.webp",
     iconoImg: "incendios.png",
+    imagenEncabezado: "incendios.png",
   },
   {
     id: "instalaciones",
@@ -90,6 +94,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     tipos: ["orden_aseo"],
     imagen: "instalaciones.webp",
     iconoImg: "instalaciones.png",
+    imagenEncabezado: "instalaciones.png",
   },
   {
     id: "quimicas",
@@ -102,6 +107,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     tipos: ["sustancias_quimicas"],
     imagen: "quimicas.webp",
     iconoImg: "quimicas.png",
+    imagenEncabezado: "quimicas.png",
   },
   {
     id: "epp",
@@ -115,6 +121,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     tipos: ["epp"],
     imagen: "epp.webp",
     iconoImg: "epp.png",
+    imagenEncabezado: "epp.png",
   },
   {
     id: "vehiculos",
@@ -127,6 +134,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     tipos: ["vehiculos_preoperacional"],
     imagen: "vehiculos.webp",
     iconoImg: "vehiculos.png",
+    imagenEncabezado: "vehiculos.png",
   },
   {
     id: "alturas",
@@ -140,6 +148,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     tipos: ["alturas_verificacion", "alturas_preoperacional", "escalera", "andamios"],
     imagen: "alturas.webp",
     iconoImg: "alturas.png",
+    imagenEncabezado: "alturas.png",
   },
 ];
 

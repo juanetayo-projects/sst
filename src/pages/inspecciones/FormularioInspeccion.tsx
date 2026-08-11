@@ -329,6 +329,14 @@ export default function FormularioInspeccion() {
           </div>
         )}
         <div className="space-y-4">
+          {categoriaSST && (
+            <img
+              src={`${import.meta.env.BASE_URL}images/encabezados/${categoriaSST.imagenEncabezado}`}
+              alt={`Encabezado — ${categoriaSST.nombre}`}
+              className="w-full rounded-xl shadow-relieve"
+            />
+          )}
+
           <div className="flex items-center gap-2">
             <Link
               to={modoEdicion ? `/inspecciones/${idInspeccion}` : "/inspecciones/nueva"}
