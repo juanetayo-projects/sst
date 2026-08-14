@@ -57,7 +57,7 @@ export default function Login() {
       <div className="mb-6 flex flex-col items-center gap-2 text-center">
         <div className="inline-flex items-center justify-center rounded-3xl bg-white/10 p-4 shadow-relieve-oscuro">
           <img
-            src={`${import.meta.env.BASE_URL}images/logo_cacsb_blanc.png`}
+            src={`${import.meta.env.BASE_URL}images/logo_cacsb_blanc.webp`}
             alt="CAC Santa Bárbara"
             className="h-14"
           />

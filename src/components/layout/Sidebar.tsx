@@ -70,7 +70,7 @@ export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
       >
         <div className="flex flex-col items-center gap-1 border-b border-white/15 px-4 py-5 text-center">
           <img
-            src={`${import.meta.env.BASE_URL}images/logo_cacsb_blanc.png`}
+            src={`${import.meta.env.BASE_URL}images/logo_cacsb_blanc.webp`}
             alt="CAC Santa Bárbara"
             className="h-10"
           />

@@ -66,8 +66,8 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: Siren,
     tipos: ["emergencias"],
     imagen: "emergencias.webp",
-    iconoImg: "emergencias.png",
-    imagenEncabezado: "emergencias.png",
+    iconoImg: "emergencias.webp",
+    imagenEncabezado: "emergencias.webp",
   },
   {
     id: "incendios",
@@ -79,8 +79,8 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: Flame,
     tipos: ["extintores"],
     imagen: "incendios.webp",
-    iconoImg: "incendios.png",
-    imagenEncabezado: "incendios.png",
+    iconoImg: "incendios.webp",
+    imagenEncabezado: "incendios.webp",
   },
   {
     id: "instalaciones",
@@ -93,8 +93,8 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: SprayCan,
     tipos: ["orden_aseo"],
     imagen: "instalaciones.webp",
-    iconoImg: "instalaciones.png",
-    imagenEncabezado: "instalaciones.png",
+    iconoImg: "instalaciones.webp",
+    imagenEncabezado: "instalaciones.webp",
   },
   {
     id: "quimicas",
@@ -106,8 +106,8 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: FlaskConical,
     tipos: ["sustancias_quimicas"],
     imagen: "quimicas.webp",
-    iconoImg: "quimicas.png",
-    imagenEncabezado: "quimicas.png",
+    iconoImg: "quimicas.webp",
+    imagenEncabezado: "quimicas.webp",
   },
   {
     id: "epp",
@@ -120,8 +120,8 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: HardHat,
     tipos: ["epp"],
     imagen: "epp.webp",
-    iconoImg: "epp.png",
-    imagenEncabezado: "epp.png",
+    iconoImg: "epp.webp",
+    imagenEncabezado: "epp.webp",
   },
   {
     id: "vehiculos",
@@ -133,8 +133,8 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: Ambulance,
     tipos: ["vehiculos_preoperacional"],
     imagen: "vehiculos.webp",
-    iconoImg: "vehiculos.png",
-    imagenEncabezado: "vehiculos.png",
+    iconoImg: "vehiculos.webp",
+    imagenEncabezado: "vehiculos.webp",
   },
   {
     id: "alturas",
@@ -147,8 +147,8 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     icono: Construction,
     tipos: ["alturas_verificacion", "alturas_preoperacional", "escalera", "andamios"],
     imagen: "alturas.webp",
-    iconoImg: "alturas.png",
-    imagenEncabezado: "alturas.png",
+    iconoImg: "alturas.webp",
+    imagenEncabezado: "alturas.webp",
   },
 ];
 

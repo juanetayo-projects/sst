@@ -5,7 +5,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Label } from '@/components/ui/label'
 
 const GRAFICOS = [
-  { id: 'modelo_gestion', titulo: 'Modelo de Gestión SST', archivo: 'images/modelo_gestion_v1.png' },
+  { id: 'modelo_gestion', titulo: 'Modelo de Gestión SST', archivo: 'images/modelo_gestion_v1.webp' },
   { id: 'clasificacion_rondas', titulo: 'Clasificación de Rondas de Inspección SST', archivo: 'images/clasificacion_rondas.webp' },
 ]
 

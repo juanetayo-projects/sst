@@ -186,7 +186,7 @@ export default function SeleccionarTipoInspeccion() {
                 ))}
               </div>
               <img
-                src={`${import.meta.env.BASE_URL}images/banner.png`}
+                src={`${import.meta.env.BASE_URL}images/banner.webp`}
                 alt=""
                 className="mt-4 w-full rounded-xl border border-border sm:mt-5"
               />
