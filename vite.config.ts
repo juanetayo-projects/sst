@@ -3,9 +3,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
-// GitHub Pages sirve la app bajo /sst/, por eso el base fijo.
+// base relativo: funciona tanto en /sst/ como en un dominio custom (ej. sst.cacsb.net)
 export default defineConfig({
-  base: '/sst/',
+  base: './',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
