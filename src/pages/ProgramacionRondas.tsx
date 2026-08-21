@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Plus, ChevronLeft, ChevronRight, Trash2, CheckCircle2, XCircle, CalendarClock, CalendarCheck, CalendarX, Percent, X } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Trash2, CheckCircle2, XCircle, CalendarClock, CalendarCheck, CalendarX, Percent, X, FileSpreadsheet } from 'lucide-react'
+import { exportarExcel } from '@/lib/exportar'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -59,14 +60,16 @@ function MiniCalendarioSeleccion({ valores, onAlternar }: { valores: Set<string>
   const offset = (primerDia.getDay() + 6) % 7
   const celdas: (number | null)[] = Array.from({ length: offset }, () => null)
   for (let d = 1; d <= diasEnMes; d++) celdas.push(d)
+  const enMesActual = mes.y === inicial.getFullYear() && mes.m === inicial.getMonth()
 
   return (
     <div className="w-full rounded-lg border border-border p-2">
       <div className="mb-1 flex items-center justify-between">
         <button
           type="button"
+          disabled={enMesActual}
           onClick={() => setMes((s) => (s.m === 0 ? { y: s.y - 1, m: 11 } : { y: s.y, m: s.m - 1 }))}
-          className="rounded p-1 hover:bg-accent"
+          className="rounded p-1 hover:bg-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <ChevronLeft className="size-3.5" />
         </button>
@@ -88,15 +91,21 @@ function MiniCalendarioSeleccion({ valores, onAlternar }: { valores: Set<string>
         {celdas.map((d, i) => {
           if (!d) return <div key={i} />
           const iso = `${mes.y}-${String(mes.m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+          const pasado = iso < hoyISO
           const activo = valores.has(iso)
           return (
             <button
               key={i}
               type="button"
+              disabled={pasado}
               onClick={() => onAlternar(iso)}
               className={cn(
                 'flex aspect-square items-center justify-center rounded text-xs transition-colors',
-                activo ? 'bg-[var(--cac-azul)] font-bold text-white' : 'hover:bg-accent'
+                pasado
+                  ? 'cursor-not-allowed text-muted-foreground/40 line-through'
+                  : activo
+                    ? 'bg-[var(--cac-azul)] font-bold text-white'
+                    : 'hover:bg-accent'
               )}
             >
               {d}
@@ -282,17 +291,59 @@ export default function ProgramacionRondas() {
 
   const listaVencidas = useMemo(() => programaciones.filter(esVencida), [programaciones])
 
+  const subtituloFiltros = useMemo(() => {
+    const partes = [
+      `Tipo: ${tipoId === TODOS ? 'Todos' : (tipos.find((t) => t.id === tipoId)?.nombre ?? 'Todos')}`,
+      `Empresa: ${empresa === TODOS ? 'Todas' : empresa}`,
+      `Sede: ${sede === TODOS ? 'Todas' : sede}`,
+      `Estado: ${estadoFiltro === TODOS ? 'Todos' : estadoFiltro}`,
+      `Desde: ${desde ? formatearFecha(desde) : '—'}`,
+      `Hasta: ${hasta ? formatearFecha(hasta) : '—'}`,
+    ]
+    return partes.join(' · ')
+  }, [tipoId, tipos, empresa, sede, estadoFiltro, desde, hasta])
+
+  async function exportar() {
+    await exportarExcel({
+      nombreArchivo: 'programacion_rondas',
+      titulo: 'Programación de rondas — SST',
+      subtitulo: subtituloFiltros,
+      columnas: [
+        { header: 'Fecha', key: 'fecha', width: 14 },
+        { header: 'Tipo de ronda', key: 'tipo', width: 32 },
+        { header: 'Empresa', key: 'empresa', width: 20 },
+        { header: 'Sede', key: 'sede', width: 24 },
+        { header: 'Responsable', key: 'responsable', width: 22 },
+        { header: 'Estado', key: 'estado', width: 14 },
+      ],
+      filas: programaciones.map((p) => ({
+        fecha: formatearFecha(p.fecha_programada),
+        tipo: p.tipos_inspeccion?.nombre ?? '—',
+        empresa: p.empresa ?? '—',
+        sede: p.sede ?? '—',
+        responsable: p.responsable?.nombre_completo ?? '—',
+        estado: esVencida(p) ? 'Vencida' : p.estado,
+      })),
+    })
+  }
+
   return (
     <div>
       <PageHeader
         titulo="Programación de rondas"
         acciones={
-          esAdmin && (
-            <Button size="sm" onClick={() => setModalAbierto(true)}>
-              <Plus />
-              Programar ronda
+          <>
+            <Button variant="outline" size="sm" disabled={programaciones.length === 0} onClick={exportar}>
+              <FileSpreadsheet />
+              Exportar Excel
             </Button>
-          )
+            {esAdmin && (
+              <Button size="sm" onClick={() => setModalAbierto(true)}>
+                <Plus />
+                Programar ronda
+              </Button>
+            )}
+          </>
         }
       />
 
@@ -414,7 +465,10 @@ export default function ProgramacionRondas() {
                         <button
                           key={i}
                           onClick={() => c.items.length > 0 && setDiaSeleccionado({ fecha: `${mesCal.y}-${String(mesCal.m + 1).padStart(2, '0')}-${String(c.dia).padStart(2, '0')}`, items: c.items })}
-                          className={cn('flex aspect-square flex-col items-center justify-start gap-0.5 rounded p-1 text-xs', c.items.length > 0 ? 'cursor-pointer' : '')}
+                          className={cn(
+                            'flex h-11 flex-col items-center justify-start gap-0.5 rounded p-1 text-xs sm:h-14',
+                            c.items.length > 0 ? 'cursor-pointer' : ''
+                          )}
                           style={color ? { backgroundColor: color.bg, color: color.text } : undefined}
                         >
                           <span className="font-medium">{c.dia}</span>

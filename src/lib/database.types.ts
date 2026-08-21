@@ -505,6 +505,7 @@ export type Database = {
           inspeccion_id: string
           observacion: string | null
           tipo_elemento: string
+          unidad_medida: string | null
         }
         Insert: {
           cantidad?: number
@@ -516,6 +517,7 @@ export type Database = {
           inspeccion_id: string
           observacion?: string | null
           tipo_elemento: string
+          unidad_medida?: string | null
         }
         Update: {
           cantidad?: number
@@ -527,6 +529,7 @@ export type Database = {
           inspeccion_id?: string
           observacion?: string | null
           tipo_elemento?: string
+          unidad_medida?: string | null
         }
         Relationships: [
           {
@@ -544,6 +547,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      unidades_medida: {
+        Row: {
+          activo: boolean
+          id: string
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activo?: boolean
+          id?: string
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          activo?: boolean
+          id?: string
+          nombre?: string
+          orden?: number
+        }
+        Relationships: []
       }
       tipos_inspeccion: {
         Row: {

@@ -8,6 +8,7 @@ export default function Catalogos() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CrudSimple tabla="empresas" titulo="Empresas" />
         <CrudSimple tabla="sedes" titulo="Sedes" />
+        <CrudSimple tabla="unidades_medida" titulo="Unidades de Medida" />
       </div>
     </div>
   )

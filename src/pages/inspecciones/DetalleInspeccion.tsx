@@ -36,7 +36,7 @@ type InspeccionDetalle = {
   profiles: { nombre_completo: string } | null;
 };
 
-type SolicitudFila = { id: string; fecha: string; tipo_elemento: string; cantidad: number; observacion: string | null; estado: string };
+type SolicitudFila = { id: string; fecha: string; tipo_elemento: string; cantidad: number; unidad_medida: string | null; observacion: string | null; estado: string };
 type CompromisoFila = { id: string; descripcion: string; responsable: string | null; fecha_compromiso: string; estado: string };
 
 export default function DetalleInspeccion() {
@@ -79,7 +79,7 @@ export default function DetalleInspeccion() {
             .eq("inspeccion_id", id),
           supabase
             .from("solicitudes_compra_item")
-            .select("id,fecha,tipo_elemento,cantidad,observacion,estado")
+            .select("id,fecha,tipo_elemento,cantidad,unidad_medida,observacion,estado")
             .eq("inspeccion_id", id),
           supabase
             .from("compromisos_ronda")
@@ -347,6 +347,7 @@ export default function DetalleInspeccion() {
                           <th className="py-1.5 pr-2 font-medium">Fecha</th>
                           <th className="py-1.5 pr-2 font-medium">Elemento</th>
                           <th className="py-1.5 pr-2 font-medium">Cantidad</th>
+                          <th className="py-1.5 pr-2 font-medium">UM</th>
                           <th className="py-1.5 pr-2 font-medium">Observación</th>
                           <th className="py-1.5 pr-2 font-medium">Estado</th>
                         </tr>
@@ -357,6 +358,7 @@ export default function DetalleInspeccion() {
                             <td className="py-1.5 pr-2">{s.fecha}</td>
                             <td className="py-1.5 pr-2">{s.tipo_elemento}</td>
                             <td className="py-1.5 pr-2">{s.cantidad}</td>
+                            <td className="py-1.5 pr-2 text-muted-foreground">{s.unidad_medida ?? "—"}</td>
                             <td className="py-1.5 pr-2 text-muted-foreground">{s.observacion ?? "—"}</td>
                             <td className="py-1.5 pr-2">
                               <Badge tono={s.estado === "recibido" ? "exito" : s.estado === "solicitado" ? "info" : "neutro"}>{s.estado}</Badge>

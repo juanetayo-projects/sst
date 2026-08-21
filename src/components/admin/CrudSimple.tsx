@@ -12,7 +12,7 @@ import { MensajeDialog, type Mensaje } from '@/components/ui/mensaje-dialog'
 
 type Fila = { id: string; nombre: string; orden: number; activo: boolean }
 
-export function CrudSimple({ tabla, titulo }: { tabla: 'empresas' | 'sedes'; titulo: string }) {
+export function CrudSimple({ tabla, titulo }: { tabla: 'empresas' | 'sedes' | 'unidades_medida'; titulo: string }) {
   const [filas, setFilas] = useState<Fila[]>([])
   const [cargando, setCargando] = useState(true)
 

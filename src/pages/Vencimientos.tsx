@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Flame } from 'lucide-react'
+import { Flame, FileSpreadsheet } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { formatearFecha } from '@/lib/utils'
+import { exportarExcel } from '@/lib/exportar'
 import { estadoVencimiento, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO, type EstadoVencimiento } from '@/lib/inventario'
 import { PageHeader, FilterBar, MetricCard } from '@/components/ui'
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
@@ -56,15 +58,52 @@ export default function Vencimientos() {
   }, [items, sede, estadoFiltro])
 
   const resumen = useMemo(() => {
-    const vencidos = items.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'vencido').length
-    const proximos = items.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'proximo').length
-    const vigentes = items.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'vigente').length
-    return { total: items.length, vencidos, proximos, vigentes }
-  }, [items])
+    const vencidos = filtrados.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'vencido').length
+    const proximos = filtrados.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'proximo').length
+    const vigentes = filtrados.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'vigente').length
+    return { total: filtrados.length, vencidos, proximos, vigentes }
+  }, [filtrados])
+
+  const subtituloFiltros = useMemo(() => {
+    const partes = [`Sede: ${sede === TODOS ? 'Todas' : sede}`, `Estado: ${estadoFiltro === TODOS ? 'Todos' : ETIQUETA_VENCIMIENTO[estadoFiltro as EstadoVencimiento]}`]
+    return partes.join(' · ')
+  }, [sede, estadoFiltro])
+
+  async function exportar() {
+    await exportarExcel({
+      nombreArchivo: 'vencimientos_extintores',
+      titulo: 'Vencimientos de extintores — SST',
+      subtitulo: subtituloFiltros,
+      columnas: [
+        { header: 'Código', key: 'codigo', width: 14 },
+        { header: 'Sede', key: 'sede', width: 26 },
+        { header: 'Ubicación', key: 'ubicacion', width: 26 },
+        { header: 'Tipo', key: 'tipo', width: 10 },
+        { header: 'Vencimiento', key: 'vencimiento', width: 14 },
+        { header: 'Estado', key: 'estado', width: 16 },
+      ],
+      filas: filtrados.map((i) => ({
+        codigo: i.codigo,
+        sede: i.sede ?? '—',
+        ubicacion: i.ubicacion ?? '—',
+        tipo: i.tipo ?? '—',
+        vencimiento: formatearFecha(i.fecha_vencimiento),
+        estado: ETIQUETA_VENCIMIENTO[estadoVencimiento(i.fecha_vencimiento)],
+      })),
+    })
+  }
 
   return (
     <div>
-      <PageHeader titulo="Vencimientos de extintores" />
+      <PageHeader
+        titulo="Vencimientos de extintores"
+        acciones={
+          <Button variant="outline" size="sm" disabled={filtrados.length === 0} onClick={exportar}>
+            <FileSpreadsheet />
+            Exportar Excel
+          </Button>
+        }
+      />
       <p className="mb-4 text-sm text-muted-foreground">
         Seguimiento de la fecha de vencimiento de cada extintor del inventario, para anticipar el recambio antes de que quede vencido. El
         inventario se administra en{' '}

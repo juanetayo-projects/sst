@@ -93,7 +93,7 @@ export default function FormularioInspeccion() {
             supabase.from("empresas").select("nombre").eq("activo", true).order("orden"),
             supabase.from("sedes").select("nombre").eq("activo", true).order("orden"),
             supabase.from("respuestas_inspeccion").select("pregunta_id,valor").eq("inspeccion_id", idInspeccion),
-            supabase.from("solicitudes_compra_item").select("id,fecha,tipo_elemento,cantidad,observacion").eq("inspeccion_id", idInspeccion),
+            supabase.from("solicitudes_compra_item").select("id,fecha,tipo_elemento,cantidad,unidad_medida,observacion").eq("inspeccion_id", idInspeccion),
             supabase.from("compromisos_ronda").select("id,descripcion,responsable,fecha_compromiso").eq("inspeccion_id", idInspeccion),
           ]);
           setEstructura(est);
@@ -111,6 +111,7 @@ export default function FormularioInspeccion() {
               fecha: s.fecha,
               tipo_elemento: s.tipo_elemento,
               cantidad: s.cantidad,
+              unidad_medida: s.unidad_medida ?? "",
               observacion: s.observacion ?? "",
             })),
           );
@@ -225,6 +226,7 @@ export default function FormularioInspeccion() {
               fecha: s.fecha,
               tipo_elemento: s.tipo_elemento,
               cantidad: s.cantidad,
+              unidad_medida: s.unidad_medida || null,
               observacion: s.observacion || null,
               created_by: session!.user.id,
             })),

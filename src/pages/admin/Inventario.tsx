@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Plus, Pencil, Trash2, Flame } from 'lucide-react'
-import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LabelList } from 'recharts'
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { estadoVencimiento, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO } from '@/lib/inventario'
 import { PageHeader, FilterBar, MetricCard } from '@/components/ui'
@@ -43,7 +43,6 @@ const VACIO: Omit<Extintor, 'id' | 'activo'> = {
 }
 
 const TODOS = '__todos__'
-const PALETA_PIE = ['#0D2D6B', '#0B7A43', '#8A3F05', '#5219A8', '#0B5D56', '#A61B12', '#64748B']
 
 export default function Inventario() {
   const [items, setItems] = useState<Extintor[]>([])
@@ -162,40 +161,40 @@ export default function Inventario() {
   })
 
   const estadisticas = useMemo(() => {
-    const vencidos = items.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'vencido').length
-    const proximos = items.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'proximo').length
-    const vigentes = items.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'vigente').length
-    return { total: items.length, vencidos, proximos, vigentes }
-  }, [items])
+    const vencidos = filtrados.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'vencido').length
+    const proximos = filtrados.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'proximo').length
+    const vigentes = filtrados.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'vigente').length
+    return { total: filtrados.length, vencidos, proximos, vigentes }
+  }, [filtrados])
 
   const porSede = useMemo(() => {
     const conteo = new Map<string, number>()
-    for (const i of items) {
+    for (const i of filtrados) {
       const s = i.sede ?? 'Sin sede'
       conteo.set(s, (conteo.get(s) ?? 0) + 1)
     }
     return Array.from(conteo.entries())
       .map(([sede, total]) => ({ sede, total }))
       .sort((a, b) => b.total - a.total)
-  }, [items])
+  }, [filtrados])
 
   const porTipo = useMemo(() => {
     const conteo = new Map<string, number>()
-    for (const i of items) {
+    for (const i of filtrados) {
       const t = i.tipo ?? 'Sin definir'
       conteo.set(t, (conteo.get(t) ?? 0) + 1)
     }
     return Array.from(conteo.entries()).map(([tipo, total]) => ({ tipo, total }))
-  }, [items])
+  }, [filtrados])
 
   const porAgente = useMemo(() => {
     const conteo = new Map<string, number>()
-    for (const i of items) {
+    for (const i of filtrados) {
       const a = i.agente_extintor ?? 'Sin definir'
       conteo.set(a, (conteo.get(a) ?? 0) + 1)
     }
     return Array.from(conteo.entries()).map(([agente, total]) => ({ agente, total }))
-  }, [items])
+  }, [filtrados])
 
   return (
     <div>
@@ -414,15 +413,13 @@ export default function Inventario() {
                   <Card>
                     <CardContent className="p-4">
                       <ResponsiveContainer width="100%" height={180}>
-                        <PieChart>
-                          <Pie data={porTipo} dataKey="total" nameKey="tipo" outerRadius={65} label={({ name, value }) => `${name}: ${value}`} style={{ fontSize: 11 }}>
-                            {porTipo.map((_, i) => (
-                              <Cell key={i} fill={PALETA_PIE[i % PALETA_PIE.length]} />
-                            ))}
-                          </Pie>
+                        <LineChart data={porTipo} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                          <XAxis dataKey="tipo" tick={{ fontSize: 11 }} />
+                          <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                           <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }} />
-                          <Legend wrapperStyle={{ fontSize: 11 }} />
-                        </PieChart>
+                          <Line type="monotone" dataKey="total" name="Extintores" stroke="var(--cac-azul)" strokeWidth={2.5} dot={{ r: 4 }} />
+                        </LineChart>
                       </ResponsiveContainer>
                     </CardContent>
                   </Card>
@@ -432,15 +429,13 @@ export default function Inventario() {
                   <Card>
                     <CardContent className="p-4">
                       <ResponsiveContainer width="100%" height={180}>
-                        <PieChart>
-                          <Pie data={porAgente} dataKey="total" nameKey="agente" outerRadius={65} label={({ name, value }) => `${name}: ${value}`} style={{ fontSize: 11 }}>
-                            {porAgente.map((_, i) => (
-                              <Cell key={i} fill={PALETA_PIE[(i + 2) % PALETA_PIE.length]} />
-                            ))}
-                          </Pie>
+                        <LineChart data={porAgente} margin={{ left: 0, right: 16, top: 8, bottom: 4 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                          <XAxis dataKey="agente" tick={{ fontSize: 11 }} />
+                          <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                           <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }} />
-                          <Legend wrapperStyle={{ fontSize: 11 }} />
-                        </PieChart>
+                          <Line type="monotone" dataKey="total" name="Extintores" stroke="var(--exito)" strokeWidth={2.5} dot={{ r: 4 }} />
+                        </LineChart>
                       </ResponsiveContainer>
                     </CardContent>
                   </Card>

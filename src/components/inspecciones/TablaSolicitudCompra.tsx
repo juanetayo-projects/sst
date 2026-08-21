@@ -1,12 +1,16 @@
+import { useEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 export type SolicitudLocal = {
   id: string
   fecha: string
   tipo_elemento: string
   cantidad: number
+  unidad_medida: string
   observacion: string
 }
 
@@ -16,6 +20,7 @@ export function nuevaSolicitudLocal(): SolicitudLocal {
     fecha: new Date().toISOString().slice(0, 10),
     tipo_elemento: '',
     cantidad: 1,
+    unidad_medida: '',
     observacion: '',
   }
 }
@@ -25,6 +30,17 @@ export function nuevaSolicitudLocal(): SolicitudLocal {
  * consolida en `/solicitudes-compra` para generar el Excel que se envía al área de Compras.
  */
 export function TablaSolicitudCompra({ filas, onChange }: { filas: SolicitudLocal[]; onChange: (filas: SolicitudLocal[]) => void }) {
+  const [unidades, setUnidades] = useState<string[]>([])
+
+  useEffect(() => {
+    supabase
+      .from('unidades_medida')
+      .select('nombre')
+      .eq('activo', true)
+      .order('orden')
+      .then(({ data }) => setUnidades((data ?? []).map((u) => u.nombre)))
+  }, [])
+
   function actualizar(id: string, cambios: Partial<SolicitudLocal>) {
     onChange(filas.map((f) => (f.id === id ? { ...f, ...cambios } : f)))
   }
@@ -42,6 +58,7 @@ export function TablaSolicitudCompra({ filas, onChange }: { filas: SolicitudLoca
                 <th className="px-2 py-1.5 font-medium">Fecha</th>
                 <th className="px-2 py-1.5 font-medium">Tipo de elemento</th>
                 <th className="w-20 px-2 py-1.5 font-medium">Cantidad</th>
+                <th className="w-28 px-2 py-1.5 font-medium">UM</th>
                 <th className="px-2 py-1.5 font-medium">Observación</th>
                 <th className="w-8 px-1 py-1.5"></th>
               </tr>
@@ -68,6 +85,20 @@ export function TablaSolicitudCompra({ filas, onChange }: { filas: SolicitudLoca
                       onChange={(e) => actualizar(f.id, { cantidad: Number(e.target.value) || 1 })}
                       className="h-8 text-xs"
                     />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <Select value={f.unidad_medida} onValueChange={(v) => actualizar(f.id, { unidad_medida: v })}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="UM" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unidades.map((u) => (
+                          <SelectItem key={u} value={u}>
+                            {u}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </td>
                   <td className="px-2 py-1.5">
                     <Input value={f.observacion} onChange={(e) => actualizar(f.id, { observacion: e.target.value })} className="h-8 text-xs" />

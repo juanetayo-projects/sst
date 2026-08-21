@@ -22,6 +22,7 @@ type Solicitud = {
   fecha: string
   tipo_elemento: string
   cantidad: number
+  unidad_medida: string | null
   observacion: string | null
   estado: 'pendiente' | 'solicitado' | 'recibido'
   inspeccion_id: string
@@ -57,7 +58,7 @@ export default function SolicitudesCompra() {
     setCargando(true)
     let q = supabase
       .from('solicitudes_compra_item')
-      .select('id,fecha,tipo_elemento,cantidad,observacion,estado,inspeccion_id,inspecciones(empresa,sede,tipo_inspeccion_id,tipos_inspeccion(nombre))')
+      .select('id,fecha,tipo_elemento,cantidad,unidad_medida,observacion,estado,inspeccion_id,inspecciones(empresa,sede,tipo_inspeccion_id,tipos_inspeccion(nombre))')
       .order('fecha', { ascending: false })
     if (estadoFiltro !== TODOS) q = q.eq('estado', estadoFiltro)
     if (desde) q = q.gte('fecha', desde)
@@ -103,6 +104,7 @@ export default function SolicitudesCompra() {
         { header: 'Sede', key: 'sede', width: 22 },
         { header: 'Elemento', key: 'elemento', width: 30 },
         { header: 'Cantidad', key: 'cantidad', width: 10 },
+        { header: 'UM', key: 'um', width: 12 },
         { header: 'Observación', key: 'observacion', width: 34 },
       ],
       filas: items.map((f) => ({
@@ -112,6 +114,7 @@ export default function SolicitudesCompra() {
         sede: f.inspecciones?.sede ?? '—',
         elemento: f.tipo_elemento,
         cantidad: f.cantidad,
+        um: f.unidad_medida ?? '',
         observacion: f.observacion ?? '',
       })),
     })
@@ -219,6 +222,7 @@ export default function SolicitudesCompra() {
                 <th className="px-3 py-2.5 font-semibold">Empresa / Sede</th>
                 <th className="px-3 py-2.5 font-semibold">Elemento</th>
                 <th className="px-3 py-2.5 font-semibold">Cant.</th>
+                <th className="px-3 py-2.5 font-semibold">UM</th>
                 <th className="px-3 py-2.5 font-semibold">Observación</th>
                 <th className="px-3 py-2.5 font-semibold">Estado</th>
                 {esAdmin && <th className="px-3 py-2.5 font-semibold"></th>}
@@ -243,6 +247,7 @@ export default function SolicitudesCompra() {
                   </td>
                   <td className="px-3 py-2">{f.tipo_elemento}</td>
                   <td className="px-3 py-2 text-right tabular">{f.cantidad}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{f.unidad_medida ?? '—'}</td>
                   <td className="px-3 py-2 text-muted-foreground">{f.observacion ?? '—'}</td>
                   <td className="px-3 py-2">
                     <Badge tono={TONO_ESTADO[f.estado]}>{ETIQUETA_ESTADO[f.estado]}</Badge>
@@ -260,7 +265,7 @@ export default function SolicitudesCompra() {
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={esAdmin ? 9 : 7} className="px-3 py-6 text-center text-muted-foreground">
+                  <td colSpan={esAdmin ? 10 : 8} className="px-3 py-6 text-center text-muted-foreground">
                     Sin solicitudes con estos filtros.
                   </td>
                 </tr>

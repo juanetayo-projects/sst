@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Paperclip, FileText, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,7 @@ export function EvidenciasInspeccion({
 }) {
   const [subiendo, setSubiendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   async function subirArchivos(archivos: FileList | null) {
     if (!archivos || archivos.length === 0 || subiendo) return
@@ -85,8 +86,9 @@ export function EvidenciasInspeccion({
       {urls.length === 0 && soloLectura && <p className="text-sm text-muted-foreground">Sin evidencias adjuntas.</p>}
 
       {!soloLectura && (
-        <label className="inline-block">
+        <>
           <input
+            ref={inputRef}
             type="file"
             multiple
             className="hidden"
@@ -96,11 +98,11 @@ export function EvidenciasInspeccion({
               e.target.value = ''
             }}
           />
-          <Button type="button" variant="outline" size="sm" cargando={subiendo}>
+          <Button type="button" variant="outline" size="sm" cargando={subiendo} onClick={() => inputRef.current?.click()}>
             <Paperclip className="size-3.5" />
             Adjuntar archivos
           </Button>
-        </label>
+        </>
       )}
       {error && <p className="text-xs text-[var(--error)]">{error}</p>}
     </div>
