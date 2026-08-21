@@ -52,6 +52,57 @@ export type Database = {
           },
         ]
       }
+      compromisos_ronda: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          descripcion: string
+          estado: string
+          fecha_compromiso: string
+          fecha_cumplido: string | null
+          id: string
+          inspeccion_id: string
+          responsable: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          descripcion: string
+          estado?: string
+          fecha_compromiso: string
+          fecha_cumplido?: string | null
+          id?: string
+          inspeccion_id: string
+          responsable?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string
+          estado?: string
+          fecha_compromiso?: string
+          fecha_cumplido?: string | null
+          id?: string
+          inspeccion_id?: string
+          responsable?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compromisos_ronda_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compromisos_ronda_inspeccion_id_fkey"
+            columns: ["inspeccion_id"]
+            isOneToOne: false
+            referencedRelation: "inspecciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           activo: boolean
@@ -78,6 +129,7 @@ export type Database = {
           created_at: string
           empresa: string | null
           estado: string
+          evidencia_urls: string[]
           fecha_inspeccion: string
           fortalezas: string | null
           hallazgos: string | null
@@ -95,6 +147,7 @@ export type Database = {
           created_at?: string
           empresa?: string | null
           estado?: string
+          evidencia_urls?: string[]
           fecha_inspeccion?: string
           fortalezas?: string | null
           hallazgos?: string | null
@@ -112,6 +165,7 @@ export type Database = {
           created_at?: string
           empresa?: string | null
           estado?: string
+          evidencia_urls?: string[]
           fecha_inspeccion?: string
           fortalezas?: string | null
           hallazgos?: string | null
@@ -439,6 +493,57 @@ export type Database = {
           orden?: number
         }
         Relationships: []
+      }
+      solicitudes_compra_item: {
+        Row: {
+          cantidad: number
+          created_at: string
+          created_by: string | null
+          estado: string
+          fecha: string
+          id: string
+          inspeccion_id: string
+          observacion: string | null
+          tipo_elemento: string
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          fecha?: string
+          id?: string
+          inspeccion_id: string
+          observacion?: string | null
+          tipo_elemento: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          created_by?: string | null
+          estado?: string
+          fecha?: string
+          id?: string
+          inspeccion_id?: string
+          observacion?: string | null
+          tipo_elemento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_compra_item_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_compra_item_inspeccion_id_fkey"
+            columns: ["inspeccion_id"]
+            isOneToOne: false
+            referencedRelation: "inspecciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tipos_inspeccion: {
         Row: {

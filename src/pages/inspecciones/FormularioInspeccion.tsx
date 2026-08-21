@@ -27,6 +27,9 @@ import { CamposExtintor } from "@/components/inspecciones/CamposExtintor";
 import { BloqueCategoria } from "@/components/inspecciones/BloqueCategoria";
 import { NavSecciones, type Seccion } from "@/components/inspecciones/NavSecciones";
 import { PanelInfograficoSST } from "@/components/inspecciones/PanelInfograficoSST";
+import { EvidenciasInspeccion } from "@/components/inspecciones/EvidenciasInspeccion";
+import { TablaSolicitudCompra, type SolicitudLocal } from "@/components/inspecciones/TablaSolicitudCompra";
+import { TablaCompromisos, type CompromisoLocal } from "@/components/inspecciones/TablaCompromisos";
 import { obtenerCategoriaSST, type ColorBloque } from "@/domain/categoriasSST";
 
 export default function FormularioInspeccion() {
@@ -53,6 +56,14 @@ export default function FormularioInspeccion() {
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
   const [faltantes, setFaltantes] = useState<Set<string>>(new Set());
 
+  // Id generado en el cliente para una inspección nueva, para poder subir evidencias
+  // a Storage desde antes de guardar (se usa como `id` explícito en el insert final).
+  const [idNuevo] = useState(() => crypto.randomUUID());
+  const idActual = modoEdicion && idInspeccion ? idInspeccion : idNuevo;
+  const [evidenciaUrls, setEvidenciaUrls] = useState<string[]>([]);
+  const [solicitudes, setSolicitudes] = useState<SolicitudLocal[]>([]);
+  const [compromisos, setCompromisos] = useState<CompromisoLocal[]>([]);
+
   const [guardando, setGuardando] = useState<"borrador" | "completada" | null>(
     null,
   );
@@ -66,7 +77,7 @@ export default function FormularioInspeccion() {
       Promise.resolve(
         supabase
           .from("inspecciones")
-          .select("empresa,sede,lugar,fecha_inspeccion,estado,tipos_inspeccion(codigo)")
+          .select("empresa,sede,lugar,fecha_inspeccion,estado,evidencia_urls,tipos_inspeccion(codigo)")
           .eq("id", idInspeccion)
           .single(),
       )
@@ -77,11 +88,13 @@ export default function FormularioInspeccion() {
             return;
           }
           const tipoCodigo = (insp as unknown as { tipos_inspeccion: { codigo: string } }).tipos_inspeccion.codigo;
-          const [est, empresasRes, sedesRes, respuestasRes] = await Promise.all([
+          const [est, empresasRes, sedesRes, respuestasRes, solicitudesRes, compromisosRes] = await Promise.all([
             cargarEstructuraInspeccion(tipoCodigo),
             supabase.from("empresas").select("nombre").eq("activo", true).order("orden"),
             supabase.from("sedes").select("nombre").eq("activo", true).order("orden"),
             supabase.from("respuestas_inspeccion").select("pregunta_id,valor").eq("inspeccion_id", idInspeccion),
+            supabase.from("solicitudes_compra_item").select("id,fecha,tipo_elemento,cantidad,observacion").eq("inspeccion_id", idInspeccion),
+            supabase.from("compromisos_ronda").select("id,descripcion,responsable,fecha_compromiso").eq("inspeccion_id", idInspeccion),
           ]);
           setEstructura(est);
           setEmpresas((empresasRes.data ?? []).map((e) => e.nombre));
@@ -91,6 +104,24 @@ export default function FormularioInspeccion() {
           setLugar(insp.lugar ?? "");
           setFecha(insp.fecha_inspeccion);
           setEstadoOriginal(insp.estado === "completada" ? "completada" : "borrador");
+          setEvidenciaUrls(insp.evidencia_urls ?? []);
+          setSolicitudes(
+            (solicitudesRes.data ?? []).map((s) => ({
+              id: s.id,
+              fecha: s.fecha,
+              tipo_elemento: s.tipo_elemento,
+              cantidad: s.cantidad,
+              observacion: s.observacion ?? "",
+            })),
+          );
+          setCompromisos(
+            (compromisosRes.data ?? []).map((c) => ({
+              id: c.id,
+              descripcion: c.descripcion,
+              responsable: c.responsable ?? "",
+              fecha_compromiso: c.fecha_compromiso,
+            })),
+          );
           const mapa: Record<string, string> = {};
           for (const f of respuestasRes.data ?? []) mapa[f.pregunta_id] = f.valor ?? "";
           setRespuestas(mapa);
@@ -181,6 +212,45 @@ export default function FormularioInspeccion() {
           valor: respuestas[p.id],
         }));
 
+    // Solicitudes de compra y compromisos se reescriben igual que las respuestas (borrar-e-insertar).
+    async function persistirItemsSecundarios(idInsp: string): Promise<string | null> {
+      const { error: errorBorradoSolicitudes } = await supabase.from("solicitudes_compra_item").delete().eq("inspeccion_id", idInsp);
+      if (errorBorradoSolicitudes) return errorBorradoSolicitudes.message;
+      if (solicitudes.length > 0) {
+        const { error } = await supabase.from("solicitudes_compra_item").insert(
+          solicitudes
+            .filter((s) => s.tipo_elemento.trim())
+            .map((s) => ({
+              inspeccion_id: idInsp,
+              fecha: s.fecha,
+              tipo_elemento: s.tipo_elemento,
+              cantidad: s.cantidad,
+              observacion: s.observacion || null,
+              created_by: session!.user.id,
+            })),
+        );
+        if (error) return error.message;
+      }
+
+      const { error: errorBorradoCompromisos } = await supabase.from("compromisos_ronda").delete().eq("inspeccion_id", idInsp);
+      if (errorBorradoCompromisos) return errorBorradoCompromisos.message;
+      if (compromisos.length > 0) {
+        const { error } = await supabase.from("compromisos_ronda").insert(
+          compromisos
+            .filter((c) => c.descripcion.trim())
+            .map((c) => ({
+              inspeccion_id: idInsp,
+              descripcion: c.descripcion,
+              responsable: c.responsable || null,
+              fecha_compromiso: c.fecha_compromiso,
+              created_by: session!.user.id,
+            })),
+        );
+        if (error) return error.message;
+      }
+      return null;
+    }
+
     if (modoEdicion && idInspeccion) {
       // Las respuestas se reescriben mientras la inspección conserva su estado original,
       // porque las políticas RLS de un inspector solo permiten tocar respuestas de una inspección en 'borrador'.
@@ -220,12 +290,24 @@ export default function FormularioInspeccion() {
           hallazgos,
           urgente,
           responsable,
+          evidencia_urls: evidenciaUrls,
         })
         .eq("id", idInspeccion);
 
       if (errorUpdate) {
         setGuardando(null);
         setMensaje({ tipo: "error", titulo: "No se pudo guardar", texto: errorUpdate.message });
+        return;
+      }
+
+      const errorSecundarios = await persistirItemsSecundarios(idInspeccion);
+      if (errorSecundarios) {
+        setGuardando(null);
+        setMensaje({
+          tipo: "error",
+          titulo: "Inspección actualizada con errores",
+          texto: `No se pudieron guardar las solicitudes/compromisos: ${errorSecundarios}`,
+        });
         return;
       }
 
@@ -242,6 +324,7 @@ export default function FormularioInspeccion() {
     const { data: inspeccion, error: errorInspeccion } = await supabase
       .from("inspecciones")
       .insert({
+        id: idNuevo,
         tipo_inspeccion_id: estructura.tipo.id,
         inspector_id: session.user.id,
         empresa: empresa || null,
@@ -253,6 +336,7 @@ export default function FormularioInspeccion() {
         hallazgos,
         urgente,
         responsable,
+        evidencia_urls: evidenciaUrls,
       })
       .select("id")
       .single();
@@ -282,6 +366,17 @@ export default function FormularioInspeccion() {
         });
         return;
       }
+    }
+
+    const errorSecundarios = await persistirItemsSecundarios(inspeccion.id);
+    if (errorSecundarios) {
+      setGuardando(null);
+      setMensaje({
+        tipo: "error",
+        titulo: "Inspección creada con errores",
+        texto: `No se pudieron guardar las solicitudes/compromisos: ${errorSecundarios}`,
+      });
+      return;
     }
 
     setGuardando(null);
@@ -477,6 +572,27 @@ export default function FormularioInspeccion() {
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardContent className="space-y-2 p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Evidencias de soporte</div>
+              <EvidenciasInspeccion inspeccionId={idActual} urls={evidenciaUrls} onChange={setEvidenciaUrls} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-2 p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Elementos a solicitar a compras</div>
+              <TablaSolicitudCompra filas={solicitudes} onChange={setSolicitudes} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-2 p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Compromisos de la ronda</div>
+              <TablaCompromisos filas={compromisos} onChange={setCompromisos} />
+            </CardContent>
+          </Card>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             {modoEdicion && estadoOriginal === "completada" ? (

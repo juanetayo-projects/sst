@@ -18,6 +18,9 @@ import GestionEncuestas from '@/pages/admin/GestionEncuestas'
 import EditorEncuesta from '@/pages/admin/EditorEncuesta'
 import Inventario from '@/pages/admin/Inventario'
 import ProgramacionRondas from '@/pages/ProgramacionRondas'
+import Vencimientos from '@/pages/Vencimientos'
+import SolicitudesCompra from '@/pages/SolicitudesCompra'
+import Compromisos from '@/pages/Compromisos'
 
 export default function App() {
   return (
@@ -47,6 +50,9 @@ export default function App() {
             />
             <Route path="infografia" element={<Infografia />} />
             <Route path="programacion" element={<ProgramacionRondas />} />
+            <Route path="vencimientos" element={<Vencimientos />} />
+            <Route path="solicitudes-compra" element={<SolicitudesCompra />} />
+            <Route path="compromisos" element={<Compromisos />} />
             <Route path="inspecciones/nueva" element={<SeleccionarTipoInspeccion />} />
             <Route path="inspecciones/nueva/:codigo" element={<FormularioInspeccion />} />
             <Route path="inspecciones/:id/editar" element={<FormularioInspeccion />} />

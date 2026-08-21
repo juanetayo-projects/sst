@@ -17,6 +17,7 @@ import { RespuestaLinea } from "@/components/inspecciones/RespuestaLinea";
 import { TermometroCategoria } from "@/components/inspecciones/TermometroCategoria";
 import { NavSecciones, type Seccion } from "@/components/inspecciones/NavSecciones";
 import { PanelInfograficoSST } from "@/components/inspecciones/PanelInfograficoSST";
+import { EvidenciasInspeccion } from "@/components/inspecciones/EvidenciasInspeccion";
 import { obtenerCategoriaSST, COLOR_HEX_BLOQUE, type ColorBloque } from "@/domain/categoriasSST";
 
 type InspeccionDetalle = {
@@ -30,9 +31,13 @@ type InspeccionDetalle = {
   hallazgos: string | null;
   urgente: boolean;
   responsable: string | null;
+  evidencia_urls: string[];
   tipos_inspeccion: { codigo: string; nombre: string };
   profiles: { nombre_completo: string } | null;
 };
+
+type SolicitudFila = { id: string; fecha: string; tipo_elemento: string; cantidad: number; observacion: string | null; estado: string };
+type CompromisoFila = { id: string; descripcion: string; responsable: string | null; fecha_compromiso: string; estado: string };
 
 export default function DetalleInspeccion() {
   const { id } = useParams<{ id: string }>();
@@ -44,6 +49,8 @@ export default function DetalleInspeccion() {
   );
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
   const [exportando, setExportando] = useState(false);
+  const [solicitudes, setSolicitudes] = useState<SolicitudFila[]>([]);
+  const [compromisos, setCompromisos] = useState<CompromisoFila[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -64,17 +71,27 @@ export default function DetalleInspeccion() {
         const insp = data as unknown as InspeccionDetalle;
         setInspeccion(insp);
 
-        const [est, { data: filas }] = await Promise.all([
+        const [est, { data: filas }, { data: solicitudesData }, { data: compromisosData }] = await Promise.all([
           cargarEstructuraInspeccion(insp.tipos_inspeccion.codigo),
           supabase
             .from("respuestas_inspeccion")
             .select("pregunta_id,valor")
+            .eq("inspeccion_id", id),
+          supabase
+            .from("solicitudes_compra_item")
+            .select("id,fecha,tipo_elemento,cantidad,observacion,estado")
+            .eq("inspeccion_id", id),
+          supabase
+            .from("compromisos_ronda")
+            .select("id,descripcion,responsable,fecha_compromiso,estado")
             .eq("inspeccion_id", id),
         ]);
         setEstructura(est);
         const mapa: Record<string, string> = {};
         for (const f of filas ?? []) mapa[f.pregunta_id] = f.valor ?? "";
         setRespuestas(mapa);
+        setSolicitudes((solicitudesData ?? []) as SolicitudFila[]);
+        setCompromisos((compromisosData ?? []) as CompromisoFila[]);
         setCargando(false);
       });
   }, [id]);
@@ -307,6 +324,81 @@ export default function DetalleInspeccion() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {(inspeccion.evidencia_urls.length > 0 || solicitudes.length > 0 || compromisos.length > 0) && (
+            <>
+              {inspeccion.evidencia_urls.length > 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Evidencias de soporte</div>
+                    <EvidenciasInspeccion inspeccionId={inspeccion.id} urls={inspeccion.evidencia_urls} onChange={() => {}} soloLectura />
+                  </CardContent>
+                </Card>
+              )}
+
+              {solicitudes.length > 0 && (
+                <Card className="overflow-x-auto">
+                  <CardContent className="p-4">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Elementos solicitados a compras</div>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                          <th className="py-1.5 pr-2 font-medium">Fecha</th>
+                          <th className="py-1.5 pr-2 font-medium">Elemento</th>
+                          <th className="py-1.5 pr-2 font-medium">Cantidad</th>
+                          <th className="py-1.5 pr-2 font-medium">Observación</th>
+                          <th className="py-1.5 pr-2 font-medium">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {solicitudes.map((s) => (
+                          <tr key={s.id} className="border-b border-border/60 last:border-0">
+                            <td className="py-1.5 pr-2">{s.fecha}</td>
+                            <td className="py-1.5 pr-2">{s.tipo_elemento}</td>
+                            <td className="py-1.5 pr-2">{s.cantidad}</td>
+                            <td className="py-1.5 pr-2 text-muted-foreground">{s.observacion ?? "—"}</td>
+                            <td className="py-1.5 pr-2">
+                              <Badge tono={s.estado === "recibido" ? "exito" : s.estado === "solicitado" ? "info" : "neutro"}>{s.estado}</Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              )}
+
+              {compromisos.length > 0 && (
+                <Card className="overflow-x-auto">
+                  <CardContent className="p-4">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Compromisos de la ronda</div>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                          <th className="py-1.5 pr-2 font-medium">Descripción</th>
+                          <th className="py-1.5 pr-2 font-medium">Responsable</th>
+                          <th className="py-1.5 pr-2 font-medium">Fecha compromiso</th>
+                          <th className="py-1.5 pr-2 font-medium">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {compromisos.map((c) => (
+                          <tr key={c.id} className="border-b border-border/60 last:border-0">
+                            <td className="py-1.5 pr-2">{c.descripcion}</td>
+                            <td className="py-1.5 pr-2 text-muted-foreground">{c.responsable ?? "—"}</td>
+                            <td className="py-1.5 pr-2">{c.fecha_compromiso}</td>
+                            <td className="py-1.5 pr-2">
+                              <Badge tono={c.estado === "cumplido" ? "exito" : "advertencia"}>{c.estado}</Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </div>
       </div>

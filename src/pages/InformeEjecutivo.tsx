@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { format, parseISO, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { AlertTriangle, CalendarClock, ChevronRight, FileClock, HelpCircle, TrendingDown, TrendingUp, X } from 'lucide-react'
+import { AlertTriangle, CalendarClock, ChevronRight, FileClock, Flame, HelpCircle, ListChecks, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import type { TipoInspeccion } from '@/domain/inspecciones'
@@ -220,6 +220,8 @@ export default function InformeEjecutivo() {
   const [tipos, setTipos] = useState<TipoInspeccion[]>([])
   const [empresas, setEmpresas] = useState<string[]>([])
   const [sedes, setSedes] = useState<string[]>([])
+  const [extintoresAlerta, setExtintoresAlerta] = useState<number>(0)
+  const [compromisosVencidos, setCompromisosVencidos] = useState<number>(0)
   const [tipoId, setTipoId] = useState(TODOS)
   const [empresa, setEmpresa] = useState(TODOS)
   const [sede, setSede] = useState(TODOS)
@@ -248,14 +250,26 @@ export default function InformeEjecutivo() {
   const [popoverHallazgo, setPopoverHallazgo] = useState<PopoverState<FilaHallazgo>>(null)
 
   useEffect(() => {
+    const hoyISO = new Date().toISOString().slice(0, 10)
+    const en30dias = new Date()
+    en30dias.setDate(en30dias.getDate() + 30)
+
     Promise.all([
       supabase.from('tipos_inspeccion').select('*').eq('activo', true).order('orden'),
       supabase.from('empresas').select('nombre').eq('activo', true).order('orden'),
       supabase.from('sedes').select('nombre').eq('activo', true).order('orden'),
-    ]).then(([tiposRes, empresasRes, sedesRes]) => {
+      supabase
+        .from('inventario_extintores')
+        .select('id', { count: 'exact', head: true })
+        .eq('activo', true)
+        .lte('fecha_vencimiento', en30dias.toISOString().slice(0, 10)),
+      supabase.from('compromisos_ronda').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente').lt('fecha_compromiso', hoyISO),
+    ]).then(([tiposRes, empresasRes, sedesRes, extintoresRes, compromisosRes]) => {
       setTipos((tiposRes.data ?? []) as TipoInspeccion[])
       setEmpresas((empresasRes.data ?? []).map((e) => e.nombre))
       setSedes((sedesRes.data ?? []).map((s) => s.nombre))
+      setExtintoresAlerta(extintoresRes.count ?? 0)
+      setCompromisosVencidos(compromisosRes.count ?? 0)
     })
   }, [])
 
@@ -560,7 +574,11 @@ export default function InformeEjecutivo() {
               <CardContent className="flex h-full max-h-40 flex-col space-y-2 overflow-y-auto p-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Alertas</div>
 
-                {rondasVencidas.length === 0 && urgentesPeriodo.length === 0 && borradoresViejos.length === 0 ? (
+                {rondasVencidas.length === 0 &&
+                urgentesPeriodo.length === 0 &&
+                borradoresViejos.length === 0 &&
+                extintoresAlerta === 0 &&
+                compromisosVencidos === 0 ? (
                   <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin alertas activas.</p>
                 ) : (
                   <div className="space-y-1.5">
@@ -572,6 +590,28 @@ export default function InformeEjecutivo() {
                         </span>
                       </div>
                     ))}
+                    {extintoresAlerta > 0 && (
+                      <Link
+                        to="/vencimientos"
+                        className="flex w-full items-start gap-2 rounded-lg bg-[var(--error-suave)] p-2 text-left text-xs hover:brightness-95"
+                      >
+                        <Flame className="mt-0.5 size-3.5 shrink-0 text-[var(--error)]" />
+                        <span>
+                          <strong>{extintoresAlerta}</strong> extintor(es) vencido(s) o próximo(s) a vencer.
+                        </span>
+                      </Link>
+                    )}
+                    {compromisosVencidos > 0 && (
+                      <Link
+                        to="/compromisos"
+                        className="flex w-full items-start gap-2 rounded-lg bg-[var(--advertencia-suave)] p-2 text-left text-xs hover:brightness-95"
+                      >
+                        <ListChecks className="mt-0.5 size-3.5 shrink-0 text-[var(--advertencia)]" />
+                        <span>
+                          <strong>{compromisosVencidos}</strong> compromiso(s) de ronda vencido(s) sin cumplir.
+                        </span>
+                      </Link>
+                    )}
                     {urgentesPeriodo.length > 0 && (
                       <button
                         onClick={(e) => abrirPopover(setPopover, e, `Urgentes del periodo (${urgentesPeriodo.length})`, COLUMNAS_POPOVER, urgentesPeriodo)}

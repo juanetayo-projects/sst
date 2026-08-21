@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardPlus, CalendarClock, FileClock, CheckCircle2, TriangleAlert, Eye } from 'lucide-react'
+import { ClipboardPlus, CalendarClock, FileClock, CheckCircle2, TriangleAlert, Eye, Flame } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { formatearFecha } from '@/lib/utils'
 import { obtenerCategoriaSST, COLOR_HEX_BLOQUE } from '@/domain/categoriasSST'
+import { estadoVencimiento, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO } from '@/lib/inventario'
 import { MetricCard } from '@/components/ui'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ type UltimaInspeccion = {
 
 type Metricas = { hoy: number; borradores: number; completadas: number; urgentes: number }
 type ConteoPorTipo = { codigo: string; nombre: string; total: number }
+type ExtintorAlerta = { id: string; codigo: string; sede: string | null; ubicacion: string | null; fecha_vencimiento: string | null }
 
 export default function DashboardPage() {
   const { perfil } = useAuth()
@@ -30,9 +32,12 @@ export default function DashboardPage() {
   const [metricas, setMetricas] = useState<Metricas>({ hoy: 0, borradores: 0, completadas: 0, urgentes: 0 })
   const [ultimas, setUltimas] = useState<UltimaInspeccion[]>([])
   const [porTipo, setPorTipo] = useState<ConteoPorTipo[]>([])
+  const [extintoresAlerta, setExtintoresAlerta] = useState<ExtintorAlerta[]>([])
 
   useEffect(() => {
     const hoyISO = new Date().toISOString().slice(0, 10)
+    const en30dias = new Date()
+    en30dias.setDate(en30dias.getDate() + 30)
 
     Promise.all([
       supabase.from('inspecciones').select('id', { count: 'exact', head: true }).eq('fecha_inspeccion', hoyISO),
@@ -46,7 +51,14 @@ export default function DashboardPage() {
         .limit(5),
       supabase.from('tipos_inspeccion').select('codigo,nombre').eq('activo', true).order('orden'),
       supabase.from('inspecciones').select('tipos_inspeccion(codigo)'),
-    ]).then(([hoy, borradores, completadas, urgentes, ultimasRes, tiposRes, todasRes]) => {
+      supabase
+        .from('inventario_extintores')
+        .select('id,codigo,sede,ubicacion,fecha_vencimiento')
+        .eq('activo', true)
+        .lte('fecha_vencimiento', en30dias.toISOString().slice(0, 10))
+        .order('fecha_vencimiento')
+        .limit(5),
+    ]).then(([hoy, borradores, completadas, urgentes, ultimasRes, tiposRes, todasRes, extintoresRes]) => {
       setMetricas({
         hoy: hoy.count ?? 0,
         borradores: borradores.count ?? 0,
@@ -54,6 +66,7 @@ export default function DashboardPage() {
         urgentes: urgentes.count ?? 0,
       })
       setUltimas((ultimasRes.data ?? []) as unknown as UltimaInspeccion[])
+      setExtintoresAlerta((extintoresRes.data ?? []) as ExtintorAlerta[])
 
       const conteo = new Map<string, number>()
       for (const t of tiposRes.data ?? []) conteo.set(t.codigo, 0)
@@ -93,6 +106,39 @@ export default function DashboardPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {extintoresAlerta.length > 0 && (
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--cac-azul)]">
+                <Flame className="size-4" />
+                Extintores vencidos o próximos a vencer
+              </div>
+              <Link to="/vencimientos" className="text-xs font-medium text-[var(--cac-azul)] hover:underline">
+                Ver todos
+              </Link>
+            </div>
+            <div className="space-y-1.5">
+              {extintoresAlerta.map((e) => {
+                const estado = estadoVencimiento(e.fecha_vencimiento)
+                return (
+                  <div key={e.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/60 px-2.5 py-1.5 text-sm">
+                    <div className="min-w-0">
+                      <span className="font-medium">{e.codigo}</span>
+                      <span className="text-muted-foreground"> — {e.sede ?? 'Sin sede'}{e.ubicacion ? ` · ${e.ubicacion}` : ''}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{formatearFecha(e.fecha_vencimiento)}</span>
+                      <Badge tono={TONO_VENCIMIENTO[estado]}>{ETIQUETA_VENCIMIENTO[estado]}</Badge>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div>

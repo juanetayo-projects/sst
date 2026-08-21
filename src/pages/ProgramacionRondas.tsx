@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Plus, ChevronLeft, ChevronRight, Trash2, CheckCircle2, XCircle, CalendarClock, CalendarCheck, CalendarX, Percent } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Trash2, CheckCircle2, XCircle, CalendarClock, CalendarCheck, CalendarX, Percent, X } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -47,9 +47,12 @@ function EstadoBadge({ p }: { p: Programacion }) {
   return <Badge tono="advertencia">Pendiente</Badge>
 }
 
-/** Mini-calendario de un solo mes para elegir una fecha — usado dentro del modal "Programar ronda". */
-function MiniCalendarioSeleccion({ valor, onSeleccionar }: { valor: string; onSeleccionar: (iso: string) => void }) {
-  const inicial = valor ? new Date(`${valor}T00:00:00`) : new Date()
+/**
+ * Mini-calendario de un solo mes para elegir una o varias fechas — usado dentro del modal "Programar ronda".
+ * Cada clic en un día lo agrega o lo quita del conjunto seleccionado (selección múltiple por defecto).
+ */
+function MiniCalendarioSeleccion({ valores, onAlternar }: { valores: Set<string>; onAlternar: (iso: string) => void }) {
+  const inicial = new Date()
   const [mes, setMes] = useState({ y: inicial.getFullYear(), m: inicial.getMonth() })
   const primerDia = new Date(mes.y, mes.m, 1)
   const diasEnMes = new Date(mes.y, mes.m + 1, 0).getDate()
@@ -58,7 +61,7 @@ function MiniCalendarioSeleccion({ valor, onSeleccionar }: { valor: string; onSe
   for (let d = 1; d <= diasEnMes; d++) celdas.push(d)
 
   return (
-    <div className="w-full max-w-[260px] rounded-lg border border-border p-2">
+    <div className="w-full rounded-lg border border-border p-2">
       <div className="mb-1 flex items-center justify-between">
         <button
           type="button"
@@ -85,12 +88,12 @@ function MiniCalendarioSeleccion({ valor, onSeleccionar }: { valor: string; onSe
         {celdas.map((d, i) => {
           if (!d) return <div key={i} />
           const iso = `${mes.y}-${String(mes.m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-          const activo = iso === valor
+          const activo = valores.has(iso)
           return (
             <button
               key={i}
               type="button"
-              onClick={() => onSeleccionar(iso)}
+              onClick={() => onAlternar(iso)}
               className={cn(
                 'flex aspect-square items-center justify-center rounded text-xs transition-colors',
                 activo ? 'bg-[var(--cac-azul)] font-bold text-white' : 'hover:bg-accent'
@@ -140,7 +143,7 @@ export default function ProgramacionRondas() {
 
   const [modalAbierto, setModalAbierto] = useState(false)
   const [tiposSeleccionados, setTiposSeleccionados] = useState<Set<string>>(new Set())
-  const [fechaProgramar, setFechaProgramar] = useState(hoyISO)
+  const [fechasProgramar, setFechasProgramar] = useState<Set<string>>(new Set())
   const [empresaProgramar, setEmpresaProgramar] = useState('')
   const [sedeProgramar, setSedeProgramar] = useState('')
   const [responsableProgramar, setResponsableProgramar] = useState('')
@@ -185,17 +188,19 @@ export default function ProgramacionRondas() {
 
   async function guardarProgramacion(e: FormEvent) {
     e.preventDefault()
-    if (tiposSeleccionados.size === 0 || !session) return
+    if (tiposSeleccionados.size === 0 || fechasProgramar.size === 0 || !session) return
     setGuardandoProgramacion(true)
-    const filas = Array.from(tiposSeleccionados).map((tipo_inspeccion_id) => ({
-      tipo_inspeccion_id,
-      fecha_programada: fechaProgramar,
-      empresa: empresaProgramar || null,
-      sede: sedeProgramar || null,
-      responsable_id: responsableProgramar || null,
-      notas: notasProgramar || null,
-      created_by: session.user.id,
-    }))
+    const filas = Array.from(tiposSeleccionados).flatMap((tipo_inspeccion_id) =>
+      Array.from(fechasProgramar).map((fecha_programada) => ({
+        tipo_inspeccion_id,
+        fecha_programada,
+        empresa: empresaProgramar || null,
+        sede: sedeProgramar || null,
+        responsable_id: responsableProgramar || null,
+        notas: notasProgramar || null,
+        created_by: session.user.id,
+      }))
+    )
     const { error } = await supabase.from('programaciones_ronda').insert(filas)
     setGuardandoProgramacion(false)
     if (error) {
@@ -204,8 +209,9 @@ export default function ProgramacionRondas() {
     }
     setModalAbierto(false)
     setTiposSeleccionados(new Set())
+    setFechasProgramar(new Set())
     setNotasProgramar('')
-    setMensaje({ tipo: 'exito', titulo: 'Ronda(s) programada(s)', texto: `Se programaron ${filas.length} ronda(s) para ${formatearFecha(fechaProgramar)}.` })
+    setMensaje({ tipo: 'exito', titulo: 'Ronda(s) programada(s)', texto: `Se crearon ${filas.length} programación(es) (${tiposSeleccionados.size} tipo(s) × ${fechasProgramar.size} fecha(s)).` })
     cargar()
   }
 
@@ -548,39 +554,77 @@ export default function ProgramacionRondas() {
 
       {/* Modal: programar ronda */}
       <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <form onSubmit={guardarProgramacion}>
-            <DialogHeader>
-              <DialogTitle>Programar ronda</DialogTitle>
+            <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+              <CalendarClock className="size-5 text-white" />
+              <DialogTitle className="text-white">Programar ronda</DialogTitle>
             </DialogHeader>
-            <div className="mt-4 space-y-3">
-              <div className="space-y-1.5">
-                <Label>Tipo(s) de ronda</Label>
-                <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
-                  {tipos.map((t) => (
-                    <label key={t.id} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={tiposSeleccionados.has(t.id)}
-                        onCheckedChange={(v) =>
-                          setTiposSeleccionados((prev) => {
-                            const copia = new Set(prev)
-                            if (v === true) copia.add(t.id)
-                            else copia.delete(t.id)
-                            return copia
-                          })
-                        }
-                      />
-                      {t.nombre}
-                    </label>
-                  ))}
+            <div className="grid grid-cols-1 gap-x-5 gap-y-3 md:grid-cols-2">
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Tipo(s) de ronda</Label>
+                  <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+                    {tipos.map((t) => (
+                      <label key={t.id} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={tiposSeleccionados.has(t.id)}
+                          onCheckedChange={(v) =>
+                            setTiposSeleccionados((prev) => {
+                              const copia = new Set(prev)
+                              if (v === true) copia.add(t.id)
+                              else copia.delete(t.id)
+                              return copia
+                            })
+                          }
+                        />
+                        {t.nombre}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Fecha(s)</Label>
+                  <p className="text-xs text-muted-foreground">Haz clic en los días que quieras programar — puedes elegir varios; un segundo clic los quita.</p>
+                  <MiniCalendarioSeleccion
+                    valores={fechasProgramar}
+                    onAlternar={(iso) =>
+                      setFechasProgramar((prev) => {
+                        const copia = new Set(prev)
+                        if (copia.has(iso)) copia.delete(iso)
+                        else copia.add(iso)
+                        return copia
+                      })
+                    }
+                  />
+                  {fechasProgramar.size > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {Array.from(fechasProgramar)
+                        .sort()
+                        .map((iso) => (
+                          <span key={iso} className="flex items-center gap-1 rounded-full bg-[var(--cac-azul-50)] py-0.5 pl-2.5 pr-1 text-xs font-medium text-[var(--cac-azul-800)]">
+                            {formatearFecha(iso)}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFechasProgramar((prev) => {
+                                  const copia = new Set(prev)
+                                  copia.delete(iso)
+                                  return copia
+                                })
+                              }
+                              className="rounded-full p-0.5 hover:bg-[var(--cac-azul-100)]"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </span>
+                        ))}
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Fecha</Label>
-                <MiniCalendarioSeleccion valor={fechaProgramar} onSeleccionar={setFechaProgramar} />
-                <p className="text-xs text-muted-foreground">Fecha elegida: {formatearFecha(fechaProgramar)}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+
+              <div className="space-y-3">
                 <div className="space-y-1.5">
                   <Label>Empresa (opcional)</Label>
                   <Select value={empresaProgramar || TODOS} onValueChange={(v) => setEmpresaProgramar(v === TODOS ? '' : v)}>
@@ -613,34 +657,34 @@ export default function ProgramacionRondas() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Responsable (opcional)</Label>
-                <Select value={responsableProgramar || TODOS} onValueChange={(v) => setResponsableProgramar(v === TODOS ? '' : v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={TODOS}>Sin asignar</SelectItem>
-                    {perfiles.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nombre_completo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Notas (opcional)</Label>
-                <Textarea rows={2} value={notasProgramar} onChange={(e) => setNotasProgramar(e.target.value)} />
+                <div className="space-y-1.5">
+                  <Label>Responsable (opcional)</Label>
+                  <Select value={responsableProgramar || TODOS} onValueChange={(v) => setResponsableProgramar(v === TODOS ? '' : v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={TODOS}>Sin asignar</SelectItem>
+                      {perfiles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.nombre_completo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Notas (opcional)</Label>
+                  <Textarea rows={4} value={notasProgramar} onChange={(e) => setNotasProgramar(e.target.value)} />
+                </div>
               </div>
             </div>
             <DialogFooter className="mt-5">
               <Button type="button" variant="outline" onClick={() => setModalAbierto(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" cargando={guardandoProgramacion} disabled={tiposSeleccionados.size === 0}>
-                Programar
+              <Button type="submit" cargando={guardandoProgramacion} disabled={tiposSeleccionados.size === 0 || fechasProgramar.size === 0}>
+                Programar {tiposSeleccionados.size > 0 && fechasProgramar.size > 0 ? `(${tiposSeleccionados.size * fechasProgramar.size})` : ''}
               </Button>
             </DialogFooter>
           </form>
