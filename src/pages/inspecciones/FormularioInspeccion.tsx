@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { MensajeDialog, type Mensaje } from "@/components/ui/mensaje-dialog";
 import { CampoDinamico } from "@/components/inspecciones/CampoDinamico";
+import { CamposExtintor } from "@/components/inspecciones/CamposExtintor";
 import { BloqueCategoria } from "@/components/inspecciones/BloqueCategoria";
 import { NavSecciones, type Seccion } from "@/components/inspecciones/NavSecciones";
 import { PanelInfograficoSST } from "@/components/inspecciones/PanelInfograficoSST";
@@ -412,16 +413,31 @@ export default function FormularioInspeccion() {
                   onChange={(e) => setFecha(e.target.value)}
                 />
               </div>
-              {estructura.encabezado.map((p) => (
-                <CampoDinamico
-                  key={p.id}
-                  pregunta={p}
-                  tipoRespuesta={estructura.tipo.tipo_respuesta}
-                  valor={respuestas[p.id] ?? ""}
-                  onChange={(v) => cambiarRespuesta(p.id, v)}
-                  invalido={faltantes.has(p.id)}
+              {estructura.tipo.codigo === "extintores" &&
+              estructura.encabezado.find((p) => p.texto === "Código del Extintor") &&
+              estructura.encabezado.find((p) => p.texto === "Tipo de Extintor") &&
+              estructura.encabezado.find((p) => p.texto === "Capacidad del extintor") ? (
+                <CamposExtintor
+                  preguntaCodigo={estructura.encabezado.find((p) => p.texto === "Código del Extintor")!}
+                  preguntaTipo={estructura.encabezado.find((p) => p.texto === "Tipo de Extintor")!}
+                  preguntaCapacidad={estructura.encabezado.find((p) => p.texto === "Capacidad del extintor")!}
+                  sede={sede}
+                  respuestas={respuestas}
+                  onChange={cambiarRespuesta}
+                  faltantes={faltantes}
                 />
-              ))}
+              ) : (
+                estructura.encabezado.map((p) => (
+                  <CampoDinamico
+                    key={p.id}
+                    pregunta={p}
+                    tipoRespuesta={estructura.tipo.tipo_respuesta}
+                    valor={respuestas[p.id] ?? ""}
+                    onChange={(v) => cambiarRespuesta(p.id, v)}
+                    invalido={faltantes.has(p.id)}
+                  />
+                ))
+              )}
             </CardContent>
           </Card>
 

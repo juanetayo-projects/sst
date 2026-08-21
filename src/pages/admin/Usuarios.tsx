@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Plus, KeyRound, Trash2 } from 'lucide-react'
+import { Plus, KeyRound, Trash2, ShieldCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { PageHeader } from '@/components/ui'
@@ -8,12 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { MensajeDialog, type Mensaje } from '@/components/ui/mensaje-dialog'
 import { SkeletonTabla } from '@/components/ui/skeleton'
 import { PasswordStrengthMeter, CampoConfirmarPassword } from '@/components/ui/password-strength'
+import { CATEGORIAS_SST } from '@/domain/categoriasSST'
 
 type Perfil = {
   id: string
@@ -43,6 +45,11 @@ export default function Usuarios() {
 
   const [aEliminar, setAEliminar] = useState<Perfil | null>(null)
   const [eliminando, setEliminando] = useState(false)
+
+  const [permisosDe, setPermisosDe] = useState<Perfil | null>(null)
+  const [categoriasPermitidas, setCategoriasPermitidas] = useState<Set<string>>(new Set())
+  const [cargandoPermisos, setCargandoPermisos] = useState(false)
+  const [guardandoPermisos, setGuardandoPermisos] = useState(false)
 
   const [mensaje, setMensaje] = useState<Mensaje>(null)
 
@@ -140,6 +147,40 @@ export default function Usuarios() {
     cargar()
   }
 
+  function abrirPermisos(u: Perfil) {
+    setPermisosDe(u)
+    setCargandoPermisos(true)
+    supabase
+      .from('permisos_ronda_categoria')
+      .select('categoria_sst')
+      .eq('profile_id', u.id)
+      .then(({ data }) => {
+        setCategoriasPermitidas(new Set((data ?? []).map((r) => r.categoria_sst)))
+        setCargandoPermisos(false)
+      })
+  }
+
+  async function guardarPermisos() {
+    if (!permisosDe) return
+    setGuardandoPermisos(true)
+    await supabase.from('permisos_ronda_categoria').delete().eq('profile_id', permisosDe.id)
+    if (categoriasPermitidas.size > 0) {
+      const filas = Array.from(categoriasPermitidas).map((categoria_sst) => ({
+        profile_id: permisosDe.id,
+        categoria_sst,
+      }))
+      const { error } = await supabase.from('permisos_ronda_categoria').insert(filas)
+      if (error) {
+        setGuardandoPermisos(false)
+        setMensaje({ tipo: 'error', titulo: 'No se pudo guardar', texto: error.message })
+        return
+      }
+    }
+    setGuardandoPermisos(false)
+    setPermisosDe(null)
+    setMensaje({ tipo: 'exito', titulo: 'Permisos actualizados', texto: `Se guardaron los permisos de ${permisosDe.nombre_completo}.` })
+  }
+
   return (
     <div>
       <PageHeader
@@ -205,6 +246,9 @@ export default function Usuarios() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" title="Permisos por ronda" onClick={() => abrirPermisos(u)}>
+                          <ShieldCheck className="size-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => setReseteando(u)}>
                           <KeyRound className="size-3.5" />
                         </Button>
@@ -365,6 +409,58 @@ export default function Usuarios() {
         onConfirm={eliminarUsuario}
         onCancel={() => setAEliminar(null)}
       />
+
+      <Dialog open={permisosDe !== null} onOpenChange={(v) => !v && setPermisosDe(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Permisos por ronda</DialogTitle>
+          </DialogHeader>
+          <p className="mt-1 text-sm text-muted-foreground">{permisosDe?.nombre_completo}</p>
+          {cargandoPermisos ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">Cargando…</div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <label className="flex items-center gap-2 rounded-lg border border-border bg-accent/40 p-2.5 text-sm font-medium">
+                <Checkbox
+                  checked={categoriasPermitidas.size === 0}
+                  onCheckedChange={(v) => setCategoriasPermitidas(v === true ? new Set() : new Set(CATEGORIAS_SST.map((c) => c.id)))}
+                />
+                Todas las rondas
+              </label>
+              <p className="text-xs text-muted-foreground">
+                O elige puntualmente a qué rondas tiene acceso para iniciar inspecciones:
+              </p>
+              <div className="space-y-1.5">
+                {CATEGORIAS_SST.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={categoriasPermitidas.size > 0 && categoriasPermitidas.has(c.id)}
+                      onCheckedChange={(v) =>
+                        setCategoriasPermitidas((prev) => {
+                          const copia = new Set(prev.size === 0 ? CATEGORIAS_SST.map((cc) => cc.id) : prev)
+                          if (v === true) copia.add(c.id)
+                          else copia.delete(c.id)
+                          return copia
+                        })
+                      }
+                    />
+                    <c.icono className="size-3.5 text-muted-foreground" />
+                    {c.nombre}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="mt-5">
+            <Button type="button" variant="outline" onClick={() => setPermisosDe(null)}>
+              Cancelar
+            </Button>
+            <Button type="button" cargando={guardandoPermisos} onClick={guardarPermisos}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <MensajeDialog mensaje={mensaje} onClose={() => setMensaje(null)} />
     </div>

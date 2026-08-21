@@ -27,53 +27,21 @@ type FilaInspeccion = {
   tipos_inspeccion: { codigo: string; nombre: string } | null
 }
 
-type FilaRespuesta = { valor: string | null; inspeccion_id: string }
+type FilaRespuesta = { valor: string | null; inspeccion_id: string; preguntas: { texto: string } | null }
 
-const CONFORME = new Set(['Cumple', 'Sí'])
+type FilaHallazgo = { id: string; inspeccion_id: string; pregunta: string; tipo: string; fecha: string }
+const COLUMNAS_HALLAZGO: PopCol<FilaHallazgo>[] = [
+  { header: 'Pregunta', get: (r) => r.pregunta },
+  { header: 'Ronda', get: (r) => r.tipo },
+  { header: 'Fecha', get: (r) => formatearFecha(r.fecha) },
+]
+
 const NO_CONFORME = new Set(['No Cumple', 'No'])
 const VENTANA_VENCIMIENTO_DIAS = 30
 const VENTANA_BORRADOR_DIAS = 7
 const TODOS = '__todos__'
 
 // ─────────────────────────── Piezas reutilizables ───────────────────────────
-
-function AnilloSimple({
-  pct,
-  color,
-  tamano = 108,
-  grosor = 11,
-  children,
-}: {
-  pct: number
-  color: string
-  tamano?: number
-  grosor?: number
-  children?: React.ReactNode
-}) {
-  const r = (tamano - grosor) / 2
-  const c = 2 * Math.PI * r
-  const clamped = Math.max(0, Math.min(100, pct))
-  return (
-    <div className="relative shrink-0" style={{ width: tamano, height: tamano }}>
-      <svg width={tamano} height={tamano} className="-rotate-90">
-        <circle cx={tamano / 2} cy={tamano / 2} r={r} fill="none" stroke="var(--muted)" strokeWidth={grosor} />
-        <circle
-          cx={tamano / 2}
-          cy={tamano / 2}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={grosor}
-          strokeDasharray={c}
-          strokeDashoffset={c - (clamped / 100) * c}
-          strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
-    </div>
-  )
-}
 
 function AnillosConcentricos({
   datos,
@@ -277,6 +245,7 @@ export default function InformeEjecutivo() {
   }, [hasta])
 
   const [popover, setPopover] = useState<PopoverState<FilaInspeccion>>(null)
+  const [popoverHallazgo, setPopoverHallazgo] = useState<PopoverState<FilaHallazgo>>(null)
 
   useEffect(() => {
     Promise.all([
@@ -358,7 +327,7 @@ export default function InformeEjecutivo() {
       }
       supabase
         .from('respuestas_inspeccion')
-        .select('valor,inspeccion_id,preguntas!inner(tipo_campo)')
+        .select('valor,inspeccion_id,preguntas!inner(tipo_campo,texto)')
         .eq('preguntas.tipo_campo', 'opcion')
         .in('inspeccion_id', ids)
         .then(({ data }) => {
@@ -397,21 +366,6 @@ export default function InformeEjecutivo() {
         total,
       }))
   }, [filas, desde, hasta])
-
-  // ── Cumplimiento ──
-  const cumplimiento = useMemo(() => {
-    let conforme = 0
-    let noConforme = 0
-    for (const r of respuestasOpcion) {
-      if (!r.valor) continue
-      if (CONFORME.has(r.valor)) conforme++
-      else if (NO_CONFORME.has(r.valor)) noConforme++
-    }
-    const total = conforme + noConforme
-    const pct = total === 0 ? 100 : Math.round((conforme / total) * 100)
-    return { pct, conforme, noConforme, total }
-  }, [respuestasOpcion])
-  const colorCumplimiento = cumplimiento.pct >= 90 ? 'var(--exito)' : cumplimiento.pct >= 75 ? 'var(--advertencia)' : 'var(--error)'
 
   // ── Distribución por ronda (anillos) ──
   const porRonda = useMemo(() => {
@@ -462,6 +416,28 @@ export default function InformeEjecutivo() {
       .map(([empresa, hallazgos]) => ({ empresa, hallazgos }))
       .sort((a, b) => b.hallazgos - a.hallazgos)
       .slice(0, 6)
+  }, [filas, respuestasOpcion])
+
+  // ── Detalle de hallazgos "No Cumple" por empresa (para el popover al clic en la barra) ──
+  const detalleHallazgosPorEmpresa = useMemo(() => {
+    const porInspeccion = new Map(filas.map((f) => [f.id, f]))
+    const mapa = new Map<string, FilaHallazgo[]>()
+    for (const r of respuestasOpcion) {
+      if (!r.valor || !NO_CONFORME.has(r.valor)) continue
+      const insp = porInspeccion.get(r.inspeccion_id)
+      if (!insp) continue
+      const empresa = insp.empresa ?? 'Sin empresa'
+      const lista = mapa.get(empresa) ?? []
+      lista.push({
+        id: `${r.inspeccion_id}-${lista.length}`,
+        inspeccion_id: r.inspeccion_id,
+        pregunta: r.preguntas?.texto ?? '—',
+        tipo: insp.tipos_inspeccion?.nombre ?? '—',
+        fecha: insp.fecha_inspeccion,
+      })
+      mapa.set(empresa, lista)
+    }
+    return mapa
   }, [filas, respuestasOpcion])
 
   return (
@@ -580,25 +556,46 @@ export default function InformeEjecutivo() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="flex h-full flex-col items-center justify-center gap-0.5 p-3">
-                <div className="mb-0.5 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Cumplimiento del checklist
-                  <span
-                    className="cursor-help text-muted-foreground/70"
-                    title="% = Cumple ÷ (Cumple + No Cumple) × 100. No incluye las respuestas 'No Aplica'."
-                  >
-                    <HelpCircle className="size-3" />
-                  </span>
-                </div>
-                <AnilloSimple pct={cumplimiento.pct} color={colorCumplimiento} tamano={80} grosor={9}>
-                  <span className="text-base font-extrabold tabular" style={{ color: colorCumplimiento }}>
-                    {cumplimiento.pct}%
-                  </span>
-                </AnilloSimple>
-                <p className="text-center text-[11px] text-muted-foreground">
-                  {cumplimiento.conforme} conformes · {cumplimiento.noConforme} no conformes
-                </p>
+            <Card className="min-h-0">
+              <CardContent className="flex h-full max-h-40 flex-col space-y-2 overflow-y-auto p-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Alertas</div>
+
+                {rondasVencidas.length === 0 && urgentesPeriodo.length === 0 && borradoresViejos.length === 0 ? (
+                  <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin alertas activas.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {rondasVencidas.map((r) => (
+                      <div key={r.categoria.id} className="flex items-start gap-2 rounded-lg bg-[var(--advertencia-suave)] p-2 text-xs">
+                        <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-[var(--advertencia)]" />
+                        <span>
+                          <strong>{r.categoria.nombre}</strong> sin inspección {r.dias === null ? 'registrada' : `hace ${r.dias} días`} (ronda mensual).
+                        </span>
+                      </div>
+                    ))}
+                    {urgentesPeriodo.length > 0 && (
+                      <button
+                        onClick={(e) => abrirPopover(setPopover, e, `Urgentes del periodo (${urgentesPeriodo.length})`, COLUMNAS_POPOVER, urgentesPeriodo)}
+                        className="flex w-full items-start gap-2 rounded-lg bg-[var(--error-suave)] p-2 text-left text-xs hover:brightness-95"
+                      >
+                        <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-[var(--error)]" />
+                        <span>
+                          <strong>{urgentesPeriodo.length}</strong> inspección(es) marcadas urgentes en el periodo.
+                        </span>
+                      </button>
+                    )}
+                    {borradoresViejos.length > 0 && (
+                      <button
+                        onClick={(e) => abrirPopover(setPopover, e, `Borradores sin cerrar (${borradoresViejos.length})`, COLUMNAS_POPOVER, borradoresViejos)}
+                        className="flex w-full items-start gap-2 rounded-lg bg-[var(--neutro-suave)] p-2 text-left text-xs hover:brightness-95"
+                      >
+                        <FileClock className="mt-0.5 size-3.5 shrink-0 text-[var(--neutro)]" />
+                        <span>
+                          <strong>{borradoresViejos.length}</strong> borrador(es) con más de {VENTANA_BORRADOR_DIAS} días sin finalizar.
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -688,73 +685,43 @@ export default function InformeEjecutivo() {
               </CardContent>
             </Card>
 
-            <div className="flex min-h-0 flex-col gap-3">
-              <Card className="min-h-0 flex-1">
-                <CardContent className="flex h-full flex-col space-y-2 overflow-y-auto p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Alertas</div>
-
-                  {rondasVencidas.length === 0 && urgentesPeriodo.length === 0 && borradoresViejos.length === 0 ? (
-                    <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin alertas activas.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {rondasVencidas.map((r) => (
-                        <div key={r.categoria.id} className="flex items-start gap-2 rounded-lg bg-[var(--advertencia-suave)] p-2 text-xs">
-                          <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-[var(--advertencia)]" />
-                          <span>
-                            <strong>{r.categoria.nombre}</strong> sin inspección {r.dias === null ? 'registrada' : `hace ${r.dias} días`} (ronda mensual).
-                          </span>
-                        </div>
-                      ))}
-                      {urgentesPeriodo.length > 0 && (
-                        <button
-                          onClick={(e) => abrirPopover(setPopover, e, `Urgentes del periodo (${urgentesPeriodo.length})`, COLUMNAS_POPOVER, urgentesPeriodo)}
-                          className="flex w-full items-start gap-2 rounded-lg bg-[var(--error-suave)] p-2 text-left text-xs hover:brightness-95"
+            <Card className="min-h-0">
+              <CardContent className="flex h-full flex-col p-3">
+                <div className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Empresas con más hallazgos "No Cumple"
+                  <span className="cursor-help text-muted-foreground/70" title="Clic en una barra para ver el detalle de los hallazgos.">
+                    <HelpCircle className="size-3" />
+                  </span>
+                </div>
+                {rankingEmpresas.length === 0 ? (
+                  <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin hallazgos registrados en el periodo.</p>
+                ) : (
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <ResponsiveContainer width="100%" height={Math.max(140, rankingEmpresas.length * 34)}>
+                      <BarChart data={rankingEmpresas} layout="vertical" margin={{ left: 0, right: 24, top: 4, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
+                        <YAxis type="category" dataKey="empresa" width={170} tick={{ fontSize: 11 }} />
+                        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }} formatter={(v: number) => [v, 'Hallazgos']} />
+                        <Bar
+                          dataKey="hallazgos"
+                          fill="var(--error)"
+                          radius={[0, 6, 6, 0]}
+                          cursor="pointer"
+                          onClick={(data: { empresa?: string; payload?: { empresa: string } }, _index: number, e: React.MouseEvent) => {
+                            const empresa = data?.payload?.empresa ?? data?.empresa
+                            if (!empresa) return
+                            abrirPopover(setPopoverHallazgo, e, `Hallazgos "No Cumple" — ${empresa}`, COLUMNAS_HALLAZGO, detalleHallazgosPorEmpresa.get(empresa) ?? [])
+                          }}
                         >
-                          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-[var(--error)]" />
-                          <span>
-                            <strong>{urgentesPeriodo.length}</strong> inspección(es) marcadas urgentes en el periodo.
-                          </span>
-                        </button>
-                      )}
-                      {borradoresViejos.length > 0 && (
-                        <button
-                          onClick={(e) => abrirPopover(setPopover, e, `Borradores sin cerrar (${borradoresViejos.length})`, COLUMNAS_POPOVER, borradoresViejos)}
-                          className="flex w-full items-start gap-2 rounded-lg bg-[var(--neutro-suave)] p-2 text-left text-xs hover:brightness-95"
-                        >
-                          <FileClock className="mt-0.5 size-3.5 shrink-0 text-[var(--neutro)]" />
-                          <span>
-                            <strong>{borradoresViejos.length}</strong> borrador(es) con más de {VENTANA_BORRADOR_DIAS} días sin finalizar.
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="min-h-0 flex-1">
-                <CardContent className="flex h-full flex-col p-3">
-                  <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Empresas con más hallazgos "No Cumple"</div>
-                  {rankingEmpresas.length === 0 ? (
-                    <p className="flex flex-1 items-center justify-center text-center text-sm text-muted-foreground">Sin hallazgos registrados en el periodo.</p>
-                  ) : (
-                    <div className="min-h-0 flex-1 overflow-y-auto">
-                      <ResponsiveContainer width="100%" height={Math.max(90, rankingEmpresas.length * 26)}>
-                        <BarChart data={rankingEmpresas} layout="vertical" margin={{ left: 0, right: 24, top: 4, bottom: 4 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
-                          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                          <YAxis type="category" dataKey="empresa" width={110} tick={{ fontSize: 10.5 }} />
-                          <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }} formatter={(v: number) => [v, 'Hallazgos']} />
-                          <Bar dataKey="hallazgos" fill="var(--error)" radius={[0, 6, 6, 0]}>
-                            <LabelList dataKey="hallazgos" position="right" style={{ fontSize: 11, fontWeight: 600, fill: 'var(--foreground)' }} />
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                          <LabelList dataKey="hallazgos" position="right" style={{ fontSize: 11, fontWeight: 600, fill: 'var(--foreground)' }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           <p className="shrink-0 text-center text-[10px] text-muted-foreground">
@@ -772,6 +739,12 @@ export default function InformeEjecutivo() {
         onClose={() => setPopover(null)}
         getKey={(r) => r.id}
         onFilaClick={(r) => navigate(`/inspecciones/${r.id}`)}
+      />
+      <PopoverDetalle
+        popover={popoverHallazgo}
+        onClose={() => setPopoverHallazgo(null)}
+        getKey={(r) => r.id}
+        onFilaClick={(r) => navigate(`/inspecciones/${r.inspeccion_id}`)}
       />
     </div>
   )

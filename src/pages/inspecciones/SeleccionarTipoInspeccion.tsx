@@ -14,6 +14,7 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
 import type { TipoInspeccion } from '@/domain/inspecciones'
 import { CATEGORIAS_SST, COLOR_HEX_BLOQUE, obtenerCategoriaSST, type CategoriaSST } from '@/domain/categoriasSST'
 import { Card, CardContent } from '@/components/ui/card'
@@ -89,9 +90,11 @@ function TarjetaSeleccion({
 
 export default function SeleccionarTipoInspeccion() {
   const navigate = useNavigate()
+  const { session, perfil } = useAuth()
   const [tipos, setTipos] = useState<TipoInspeccion[]>([])
   const [cargando, setCargando] = useState(true)
   const [categoriaId, setCategoriaId] = useState<string | null>(null)
+  const [categoriasPermitidas, setCategoriasPermitidas] = useState<Set<string> | null>(null)
 
   useEffect(() => {
     supabase
@@ -105,7 +108,19 @@ export default function SeleccionarTipoInspeccion() {
       })
   }, [])
 
-  const grupos = CATEGORIAS_SST.map((cat) => ({
+  useEffect(() => {
+    if (!session || perfil?.role === 'admin') return
+    supabase
+      .from('permisos_ronda_categoria')
+      .select('categoria_sst')
+      .eq('profile_id', session.user.id)
+      .then(({ data }) => {
+        // Sin filas = sin restricción (ve todas las rondas).
+        if (data && data.length > 0) setCategoriasPermitidas(new Set(data.map((r) => r.categoria_sst)))
+      })
+  }, [session, perfil])
+
+  const grupos = CATEGORIAS_SST.filter((cat) => !categoriasPermitidas || categoriasPermitidas.has(cat.id)).map((cat) => ({
     categoria: cat,
     tipos: tipos.filter((t) => obtenerCategoriaSST(t.codigo)?.id === cat.id),
   })).filter((g) => g.tipos.length > 0)

@@ -22,11 +22,11 @@ export function CampoDinamico({
   if (pregunta.tipo_campo === 'opcion' || pregunta.tipo_campo === 'booleano') {
     const opciones = pregunta.tipo_campo === 'opcion' ? OPCIONES_RESPUESTA[tipoRespuesta] : OPCIONES_BOOLEANO
     return (
-      <div className="flex items-center justify-between gap-3 border-b border-border/60 py-1.5 last:border-0">
-        <span className="flex-1 text-sm">
+      <div className="space-y-1.5 border-b border-border/60 py-1.5 last:border-0">
+        <div className="text-sm">
           {pregunta.texto}
           {pregunta.obligatoria && <Obligatorio />}
-        </span>
+        </div>
         <SegmentoOpciones opciones={opciones} valor={valor} onChange={onChange} invalido={invalido} />
       </div>
     )

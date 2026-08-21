@@ -16,6 +16,8 @@ import Usuarios from '@/pages/admin/Usuarios'
 import Catalogos from '@/pages/admin/Catalogos'
 import GestionEncuestas from '@/pages/admin/GestionEncuestas'
 import EditorEncuesta from '@/pages/admin/EditorEncuesta'
+import Inventario from '@/pages/admin/Inventario'
+import ProgramacionRondas from '@/pages/ProgramacionRondas'
 
 export default function App() {
   return (
@@ -44,6 +46,7 @@ export default function App() {
               }
             />
             <Route path="infografia" element={<Infografia />} />
+            <Route path="programacion" element={<ProgramacionRondas />} />
             <Route path="inspecciones/nueva" element={<SeleccionarTipoInspeccion />} />
             <Route path="inspecciones/nueva/:codigo" element={<FormularioInspeccion />} />
             <Route path="inspecciones/:id/editar" element={<FormularioInspeccion />} />
@@ -77,6 +80,14 @@ export default function App() {
               element={
                 <ProtectedRoute soloAdmin>
                   <EditorEncuesta />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/inventario"
+              element={
+                <ProtectedRoute soloAdmin>
+                  <Inventario />
                 </ProtectedRoute>
               }
             />

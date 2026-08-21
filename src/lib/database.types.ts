@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.15"
   }
@@ -140,6 +142,83 @@ export type Database = {
           },
         ]
       }
+      inventario_extintores: {
+        Row: {
+          activo: boolean
+          agente_extintor: string | null
+          capacidad: string | null
+          codigo: string
+          created_at: string
+          empresa: string | null
+          fecha_vencimiento: string | null
+          id: string
+          piso: string | null
+          prueba_hidrostatica: string | null
+          sede: string | null
+          tipo: string | null
+          ubicacion: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          agente_extintor?: string | null
+          capacidad?: string | null
+          codigo: string
+          created_at?: string
+          empresa?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          piso?: string | null
+          prueba_hidrostatica?: string | null
+          sede?: string | null
+          tipo?: string | null
+          ubicacion?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          agente_extintor?: string | null
+          capacidad?: string | null
+          codigo?: string
+          created_at?: string
+          empresa?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          piso?: string | null
+          prueba_hidrostatica?: string | null
+          sede?: string | null
+          tipo?: string | null
+          ubicacion?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      permisos_ronda_categoria: {
+        Row: {
+          categoria_sst: string
+          created_at: string
+          profile_id: string
+        }
+        Insert: {
+          categoria_sst: string
+          created_at?: string
+          profile_id: string
+        }
+        Update: {
+          categoria_sst?: string
+          created_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permisos_ronda_categoria_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       preguntas: {
         Row: {
           activa: boolean
@@ -223,6 +302,80 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      programaciones_ronda: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          empresa: string | null
+          estado: string
+          fecha_programada: string
+          id: string
+          inspeccion_id: string | null
+          notas: string | null
+          responsable_id: string | null
+          sede: string | null
+          tipo_inspeccion_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          empresa?: string | null
+          estado?: string
+          fecha_programada: string
+          id?: string
+          inspeccion_id?: string | null
+          notas?: string | null
+          responsable_id?: string | null
+          sede?: string | null
+          tipo_inspeccion_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          empresa?: string | null
+          estado?: string
+          fecha_programada?: string
+          id?: string
+          inspeccion_id?: string | null
+          notas?: string | null
+          responsable_id?: string | null
+          sede?: string | null
+          tipo_inspeccion_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programaciones_ronda_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programaciones_ronda_inspeccion_id_fkey"
+            columns: ["inspeccion_id"]
+            isOneToOne: false
+            referencedRelation: "inspecciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programaciones_ronda_responsable_id_fkey"
+            columns: ["responsable_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programaciones_ronda_tipo_inspeccion_id_fkey"
+            columns: ["tipo_inspeccion_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_inspeccion"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       respuestas_inspeccion: {
         Row: {
@@ -332,6 +485,7 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: never; Returns: boolean }
+      is_inspector: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
