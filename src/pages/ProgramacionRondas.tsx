@@ -8,7 +8,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { cn, formatearFecha } from '@/lib/utils'
 import type { TipoInspeccion } from '@/domain/inspecciones'
-import { PageHeader, FilterBar, MetricCard } from '@/components/ui'
+import { obtenerCategoriaSST, COLOR_HEX_BLOQUE } from '@/domain/categoriasSST'
+import { PageHeader, MetricCard } from '@/components/ui'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -309,6 +310,13 @@ export default function ProgramacionRondas() {
     return { bg: 'var(--neutro-suave)', text: 'var(--neutro)', borde: 'var(--neutro)' }
   }
 
+  /** Color de la categoría SST (Emergencias, Extintores, etc.) a la que pertenece el tipo de ronda de una programación. */
+  function colorCategoriaItem(p: Programacion) {
+    const codigo = p.tipos_inspeccion?.codigo
+    const categoria = codigo ? obtenerCategoriaSST(codigo) : undefined
+    return categoria ? COLOR_HEX_BLOQUE[categoria.color] : 'var(--neutro)'
+  }
+
   // ── Estadísticas ──
   const estadisticas = useMemo(() => {
     const activas = programaciones.filter((p) => p.estado !== 'cancelada')
@@ -389,170 +397,176 @@ export default function ProgramacionRondas() {
         }
       />
 
-      <FilterBar>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Tipo</Label>
-          <Select value={tipoId} onValueChange={setTipoId}>
-            <SelectTrigger className="h-8 w-44 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TODOS}>Todos los tipos</SelectItem>
-              {tipos.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Empresa</Label>
-          <Select value={empresa} onValueChange={setEmpresa}>
-            <SelectTrigger className="h-8 w-32 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TODOS}>Todas</SelectItem>
-              {empresas.map((e) => (
-                <SelectItem key={e} value={e}>
-                  {e}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Sede</Label>
-          <Select value={sede} onValueChange={setSede}>
-            <SelectTrigger className="h-8 w-32 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TODOS}>Todas</SelectItem>
-              {sedes.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Estado</Label>
-          <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-            <SelectTrigger className="h-8 w-32 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TODOS}>Todos</SelectItem>
-              <SelectItem value="pendiente">Pendiente</SelectItem>
-              <SelectItem value="vencida">Vencida</SelectItem>
-              <SelectItem value="realizada">Realizada</SelectItem>
-              <SelectItem value="cancelada">Cancelada</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Desde</Label>
-          <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="h-8 w-32 text-xs" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Hasta</Label>
-          <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="h-8 w-32 text-xs" />
-        </div>
-      </FilterBar>
-
       <Tabs defaultValue="calendario">
-        <TabsList>
-          <TabsTrigger value="calendario">Calendario</TabsTrigger>
-          <TabsTrigger value="tabla">Tabla</TabsTrigger>
-          <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
-        </TabsList>
+        <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-3 shadow-relieve-sm">
+          <TabsList>
+            <TabsTrigger value="calendario">Calendario</TabsTrigger>
+            <TabsTrigger value="tabla">Tabla</TabsTrigger>
+            <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
+          </TabsList>
+          <div className="mx-1 hidden h-8 w-px self-end bg-border sm:block" />
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tipo</Label>
+            <Select value={tipoId} onValueChange={setTipoId}>
+              <SelectTrigger className="h-8 w-44 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODOS}>Todos los tipos</SelectItem>
+                {tipos.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Empresa</Label>
+            <Select value={empresa} onValueChange={setEmpresa}>
+              <SelectTrigger className="h-8 w-32 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODOS}>Todas</SelectItem>
+                {empresas.map((e) => (
+                  <SelectItem key={e} value={e}>
+                    {e}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Sede</Label>
+            <Select value={sede} onValueChange={setSede}>
+              <SelectTrigger className="h-8 w-32 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODOS}>Todas</SelectItem>
+                {sedes.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Estado</Label>
+            <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+              <SelectTrigger className="h-8 w-32 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODOS}>Todos</SelectItem>
+                <SelectItem value="pendiente">Pendiente</SelectItem>
+                <SelectItem value="vencida">Vencida</SelectItem>
+                <SelectItem value="realizada">Realizada</SelectItem>
+                <SelectItem value="cancelada">Cancelada</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Desde</Label>
+            <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="h-8 w-32 text-xs" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Hasta</Label>
+            <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="h-8 w-32 text-xs" />
+          </div>
+        </div>
 
         {cargando ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Cargando…</div>
         ) : (
           <>
             <TabsContent value="calendario">
-              <Card className="overflow-hidden">
-                <div className="franja-institucional flex items-center justify-between px-4 py-3">
-                  <button
-                    type="button"
-                    className="rounded-full p-1.5 text-white/90 transition-colors hover:bg-white/15 hover:text-white"
-                    onClick={() => setMesCal((s) => (s.m === 0 ? { y: s.y - 1, m: 11 } : { y: s.y, m: s.m - 1 }))}
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  <span className="text-sm font-semibold capitalize text-white">
-                    {format(new Date(mesCal.y, mesCal.m, 1), 'MMMM yyyy', { locale: es })}
-                  </span>
-                  <button
-                    type="button"
-                    className="rounded-full p-1.5 text-white/90 transition-colors hover:bg-white/15 hover:text-white"
-                    onClick={() => setMesCal((s) => (s.m === 11 ? { y: s.y + 1, m: 0 } : { y: s.y, m: s.m + 1 }))}
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
-                </div>
-                <CardContent className="p-3 sm:p-4">
-                  <div className="grid grid-cols-7 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
-                      <div key={d} className="py-1.5">
-                        {d}
-                      </div>
-                    ))}
+              <div className="mx-auto max-w-md">
+                <Card className="overflow-hidden">
+                  <div className="franja-institucional flex items-center justify-between px-3 py-2">
+                    <button
+                      type="button"
+                      className="rounded-full p-1.5 text-white/90 transition-colors hover:bg-white/15 hover:text-white"
+                      onClick={() => setMesCal((s) => (s.m === 0 ? { y: s.y - 1, m: 11 } : { y: s.y, m: s.m - 1 }))}
+                    >
+                      <ChevronLeft className="size-4" />
+                    </button>
+                    <span className="text-sm font-semibold capitalize text-white">
+                      {format(new Date(mesCal.y, mesCal.m, 1), 'MMMM yyyy', { locale: es })}
+                    </span>
+                    <button
+                      type="button"
+                      className="rounded-full p-1.5 text-white/90 transition-colors hover:bg-white/15 hover:text-white"
+                      onClick={() => setMesCal((s) => (s.m === 11 ? { y: s.y + 1, m: 0 } : { y: s.y, m: s.m + 1 }))}
+                    >
+                      <ChevronRight className="size-4" />
+                    </button>
                   </div>
-                  <div className="mt-1 grid grid-cols-7 gap-1.5 sm:gap-2">
-                    {cal.map((c, i) => {
-                      if (!c) return <div key={i} />
-                      const color = colorDia(c.items)
-                      const iso = `${mesCal.y}-${String(mesCal.m + 1).padStart(2, '0')}-${String(c.dia).padStart(2, '0')}`
-                      const esHoy = iso === hoyISO
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => c.items.length > 0 && setDiaSeleccionado({ fecha: iso, items: c.items })}
-                          className={cn(
-                            'flex h-12 flex-col items-center justify-start gap-0.5 rounded-lg border p-1 text-xs transition-shadow sm:h-16',
-                            c.items.length > 0 ? 'cursor-pointer hover:shadow-md' : 'cursor-default',
-                            esHoy ? 'ring-2 ring-[var(--cac-azul)] ring-offset-1' : ''
-                          )}
-                          style={{
-                            backgroundColor: color?.bg ?? 'var(--fila-par)',
-                            color: color?.text ?? 'var(--foreground)',
-                            borderColor: color?.borde ?? 'var(--border)',
-                          }}
-                        >
-                          <span className={cn('font-medium', esHoy && 'text-[var(--cac-azul)]')}>{c.dia}</span>
-                          {c.items.length > 0 && (
-                            <span
-                              className="rounded-full px-1.5 text-[10px] font-bold text-white"
-                              style={{ backgroundColor: color?.borde ?? 'var(--neutro)' }}
-                            >
-                              {c.items.length}
-                            </span>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-                    {[
-                      { label: 'Vencida', color: 'var(--error)' },
-                      { label: 'Pendiente', color: 'var(--advertencia)' },
-                      { label: 'Realizada', color: 'var(--exito)' },
-                      { label: 'Cancelada', color: 'var(--neutro)' },
-                    ].map((l) => (
-                      <span key={l.label} className="flex items-center gap-1.5">
-                        <span className="size-2.5 rounded-full" style={{ backgroundColor: l.color }} />
-                        {l.label}
-                      </span>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                  <CardContent className="p-2.5 sm:p-3">
+                    <div className="grid grid-cols-7 text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
+                        <div key={d} className="py-1">
+                          {d}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-1 grid grid-cols-7 gap-1">
+                      {cal.map((c, i) => {
+                        if (!c) return <div key={i} />
+                        const color = colorDia(c.items)
+                        const iso = `${mesCal.y}-${String(mesCal.m + 1).padStart(2, '0')}-${String(c.dia).padStart(2, '0')}`
+                        const esHoy = iso === hoyISO
+                        const itemsVisibles = c.items.slice(0, 4)
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => c.items.length > 0 && setDiaSeleccionado({ fecha: iso, items: c.items })}
+                            className={cn(
+                              'flex h-10 flex-col items-center justify-start gap-0.5 rounded-md border p-0.5 text-xs transition-shadow sm:h-12',
+                              c.items.length > 0 ? 'cursor-pointer hover:shadow-md' : 'cursor-default',
+                              esHoy ? 'ring-2 ring-[var(--cac-azul)] ring-offset-1' : ''
+                            )}
+                            style={{
+                              backgroundColor: color?.bg ?? 'var(--fila-par)',
+                              color: color?.text ?? 'var(--foreground)',
+                              borderColor: color?.borde ?? 'var(--border)',
+                            }}
+                          >
+                            <span className={cn('font-medium', esHoy && 'text-[var(--cac-azul)]')}>{c.dia}</span>
+                            {c.items.length > 0 && (
+                              <span className="flex flex-wrap items-center justify-center gap-0.5">
+                                {itemsVisibles.map((p, idx) => (
+                                  <span key={idx} className="size-1.5 rounded-full" style={{ backgroundColor: colorCategoriaItem(p) }} />
+                                ))}
+                                {c.items.length > itemsVisibles.length && (
+                                  <span className="text-[8px] font-bold leading-none">+{c.items.length - itemsVisibles.length}</span>
+                                )}
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/60 pt-2.5 text-[11px] text-muted-foreground">
+                      {[
+                        { label: 'Vencida', color: 'var(--error)' },
+                        { label: 'Pendiente', color: 'var(--advertencia)' },
+                        { label: 'Realizada', color: 'var(--exito)' },
+                        { label: 'Cancelada', color: 'var(--neutro)' },
+                      ].map((l) => (
+                        <span key={l.label} className="flex items-center gap-1">
+                          <span className="size-2 rounded-full border border-black/10" style={{ backgroundColor: l.color }} />
+                          {l.label}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[10px] text-muted-foreground">Los puntos de color en cada día indican la categoría de la ronda programada.</p>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="tabla">
@@ -831,7 +845,7 @@ export default function ProgramacionRondas() {
           </DialogHeader>
           <div className="space-y-2">
             {diaSeleccionado?.items.map((p) => (
-              <div key={p.id} className="rounded-lg border border-border p-2.5 text-sm">
+              <div key={p.id} className="rounded-lg border border-border p-2.5 text-sm" style={{ borderLeft: `3px solid ${colorCategoriaItem(p)}` }}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="font-medium">{p.tipos_inspeccion?.nombre ?? '—'}</div>
