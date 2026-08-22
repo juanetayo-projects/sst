@@ -7,11 +7,10 @@ import { supabase } from '@/lib/supabase'
 import { formatearFecha } from '@/lib/utils'
 import { obtenerCategoriaSST, COLOR_HEX_BLOQUE } from '@/domain/categoriasSST'
 import { estadoVencimiento, diasParaVencer, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO } from '@/lib/inventario'
-import { MetricCard, FilterBar } from '@/components/ui'
+import { MetricCard } from '@/components/ui'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { SkeletonTabla } from '@/components/ui/skeleton'
 
@@ -39,6 +38,7 @@ export default function DashboardPage() {
   const [extintoresAlerta, setExtintoresAlerta] = useState<ExtintorAlerta[]>([])
   const [empresaFiltro, setEmpresaFiltro] = useState(TODOS)
   const [sedeFiltro, setSedeFiltro] = useState(TODOS)
+  const [estadoFiltro, setEstadoFiltro] = useState(TODOS)
 
   useEffect(() => {
     const hoyISO = new Date().toISOString().slice(0, 10)
@@ -97,8 +97,9 @@ export default function DashboardPage() {
     () =>
       extintoresAlerta
         .filter((e) => empresaFiltro === TODOS || e.empresa === empresaFiltro)
-        .filter((e) => sedeFiltro === TODOS || e.sede === sedeFiltro),
-    [extintoresAlerta, empresaFiltro, sedeFiltro]
+        .filter((e) => sedeFiltro === TODOS || e.sede === sedeFiltro)
+        .filter((e) => estadoFiltro === TODOS || estadoVencimiento(e.fecha_vencimiento) === estadoFiltro),
+    [extintoresAlerta, empresaFiltro, sedeFiltro, estadoFiltro]
   )
   const extintoresPorCodigo = useMemo(
     () =>
@@ -111,34 +112,33 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h2 className="mb-1 text-lg font-semibold text-[var(--cac-azul)]">
-        Hola, {perfil?.nombre_completo?.split(' ')[0] ?? '—'}
-      </h2>
-      <p className="mb-6 text-sm text-muted-foreground">
-        Bienvenido al Sistema de Inspecciones de Seguridad y Salud en el Trabajo.
-      </p>
-
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard titulo="Hoy" valor={metricas.hoy} icono={CalendarClock} color="azul" />
-        <MetricCard titulo="Borradores" valor={metricas.borradores} icono={FileClock} color="ambar" />
-        <MetricCard titulo="Completadas" valor={metricas.completadas} icono={CheckCircle2} color="verde" />
-        <MetricCard titulo="Urgentes" valor={metricas.urgentes} icono={TriangleAlert} color="rojo" />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--cac-azul)]">
+            Hola, {perfil?.nombre_completo?.split(' ')[0] ?? '—'}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Bienvenido al Sistema de Inspecciones de Seguridad y Salud en el Trabajo.
+          </p>
+        </div>
+        <Button asChild>
+          <Link to="/inspecciones/nueva">
+            <ClipboardPlus />
+            Nueva inspección
+          </Link>
+        </Button>
       </div>
 
-      <Card className="mb-6">
-        <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-          <Button asChild>
-            <Link to="/inspecciones/nueva">
-              <ClipboardPlus />
-              Nueva inspección
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <MetricCard compacto titulo="Hoy" valor={metricas.hoy} icono={CalendarClock} color="azul" />
+        <MetricCard compacto titulo="Borradores" valor={metricas.borradores} icono={FileClock} color="ambar" />
+        <MetricCard compacto titulo="Completadas" valor={metricas.completadas} icono={CheckCircle2} color="verde" />
+        <MetricCard compacto titulo="Urgentes" valor={metricas.urgentes} icono={TriangleAlert} color="rojo" />
+      </div>
 
       {extintoresAlerta.length > 0 && (
-        <Card className="mb-6">
-          <CardContent className="p-4">
+        <Card className="mb-4">
+          <CardContent className="p-3">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--cac-azul)]">
                 <Flame className="size-4" />
@@ -149,50 +149,54 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <FilterBar className="mb-3 mt-0">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Empresa</Label>
-                <Select value={empresaFiltro} onValueChange={setEmpresaFiltro}>
-                  <SelectTrigger className="h-8 w-36 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={TODOS}>Todas</SelectItem>
-                    {empresasExtintores.map((e) => (
-                      <SelectItem key={e} value={e}>
-                        {e}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Sede</Label>
-                <Select value={sedeFiltro} onValueChange={setSedeFiltro}>
-                  <SelectTrigger className="h-8 w-36 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={TODOS}>Todas</SelectItem>
-                    {sedesExtintores.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </FilterBar>
+            <div className="mb-2.5 flex flex-wrap items-center gap-2">
+              <Select value={empresaFiltro} onValueChange={setEmpresaFiltro}>
+                <SelectTrigger className="h-7 w-32 text-xs">
+                  <SelectValue placeholder="Empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TODOS}>Todas las empresas</SelectItem>
+                  {empresasExtintores.map((e) => (
+                    <SelectItem key={e} value={e}>
+                      {e}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sedeFiltro} onValueChange={setSedeFiltro}>
+                <SelectTrigger className="h-7 w-32 text-xs">
+                  <SelectValue placeholder="Sede" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TODOS}>Todas las sedes</SelectItem>
+                  {sedesExtintores.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+                <SelectTrigger className="h-7 w-32 text-xs">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TODOS}>Vencidos y próximos</SelectItem>
+                  <SelectItem value="vencido">Vencidos</SelectItem>
+                  <SelectItem value="proximo">Próximos a vencer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
-              <div className="max-h-80 overflow-y-auto rounded-lg border border-border/60">
-                <table className="w-full text-sm">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_300px]">
+              <div className="max-h-56 overflow-y-auto rounded-lg border border-border/60">
+                <table className="w-full text-xs">
                   <thead className="sticky top-0">
-                    <tr className="franja-institucional text-left text-xs text-white">
-                      <th className="px-3 py-2 font-semibold">Código</th>
-                      <th className="px-3 py-2 font-semibold">Empresa / Sede</th>
-                      <th className="px-3 py-2 font-semibold">Vencimiento</th>
-                      <th className="px-3 py-2 font-semibold">Estado</th>
+                    <tr className="franja-institucional text-left text-white">
+                      <th className="px-2.5 py-1.5 font-semibold">Código</th>
+                      <th className="px-2.5 py-1.5 font-semibold">Empresa / Sede</th>
+                      <th className="px-2.5 py-1.5 font-semibold">Vencimiento</th>
+                      <th className="px-2.5 py-1.5 font-semibold">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -200,12 +204,12 @@ export default function DashboardPage() {
                       const estado = estadoVencimiento(e.fecha_vencimiento)
                       return (
                         <tr key={e.id} className="border-b border-border/60 last:border-0" style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}>
-                          <td className="px-3 py-1.5 font-medium">{e.codigo}</td>
-                          <td className="px-3 py-1.5 text-muted-foreground">
+                          <td className="px-2.5 py-1 font-medium">{e.codigo}</td>
+                          <td className="px-2.5 py-1 text-muted-foreground">
                             {e.empresa ?? 'Sin empresa'} {e.sede ? `· ${e.sede}` : ''}
                           </td>
-                          <td className="px-3 py-1.5">{formatearFecha(e.fecha_vencimiento)}</td>
-                          <td className="px-3 py-1.5">
+                          <td className="px-2.5 py-1">{formatearFecha(e.fecha_vencimiento)}</td>
+                          <td className="px-2.5 py-1">
                             <Badge tono={TONO_VENCIMIENTO[estado]}>{ETIQUETA_VENCIMIENTO[estado]}</Badge>
                           </td>
                         </tr>
@@ -224,7 +228,7 @@ export default function DashboardPage() {
 
               <div>
                 <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Días vencidos / por vencer, por código</div>
-                <ResponsiveContainer width="100%" height={Math.max(200, extintoresPorCodigo.length * 26)}>
+                <ResponsiveContainer width="100%" height={Math.max(160, extintoresPorCodigo.length * 22)}>
                   <BarChart data={extintoresPorCodigo} layout="vertical" margin={{ left: 0, right: 24, top: 4, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
                     <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10.5 }} />

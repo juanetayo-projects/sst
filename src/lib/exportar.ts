@@ -239,3 +239,158 @@ export async function exportarInspeccionPDF(datos: {
     })
     .download(`${datos.titulo}.pdf`)
 }
+
+async function cargarPlantilla(archivo: string) {
+  const ExcelJS = (await import('exceljs')).default
+  const res = await fetch(`${import.meta.env.BASE_URL}plantillas/${archivo}`)
+  if (!res.ok) throw new Error(`No se encontró la plantilla "${archivo}".`)
+  const buffer = await res.arrayBuffer()
+  const wb = new ExcelJS.Workbook()
+  await wb.xlsx.load(buffer)
+  return wb
+}
+
+export type ItemSolicitudCompra = {
+  tipo_elemento: string
+  cantidad: number
+  unidad_medida: string | null
+  observacion: string | null
+  empresa: string | null
+  sede: string | null
+}
+
+/**
+ * Exporta ítems de solicitudes de compra a la plantilla institucional oficial
+ * (`RED-GCS-F-005 — Solicitud interna suministros y recursos físicos`), agrupando
+ * elementos repetidos (mismo nombre + unidad de medida) sumando la cantidad.
+ * Los campos de clasificación administrativa que la app no conoce (cargo, tiempo
+ * de gestión, tipo de suministro, categoría) se dejan en blanco para que Compras
+ * los complete según su criterio.
+ *
+ * La plantilla trae 5 filas de ítems ya diseñadas (con celdas combinadas); insertar
+ * filas nuevas con ExcelJS corrompe esas combinaciones en este archivo específico
+ * (error "Cannot merge already merged cells" al reabrirlo), así que si hay más de
+ * 5 grupos, los que sobran se listan en la columna de Especificaciones de la última
+ * fila en vez de crear filas nuevas. Devuelve cuántos grupos quedaron así, para que
+ * quien llama pueda avisarlo.
+ */
+export async function exportarPlantillaCompras(opts: { items: ItemSolicitudCompra[]; solicitante: string }): Promise<{ desbordados: number }> {
+  const wb = await cargarPlantilla('plantilla-compras.xlsx')
+  const ws = wb.getWorksheet('RED-GCS-F-005')
+  if (!ws) throw new Error('La plantilla de compras no tiene la hoja esperada.')
+
+  const grupos = new Map<string, { descripcion: string; unidad: string; cantidad: number; observaciones: Set<string>; empresasSedes: Set<string> }>()
+  for (const item of opts.items) {
+    const unidad = (item.unidad_medida ?? '').trim()
+    const clave = `${item.tipo_elemento.trim().toLowerCase()}|${unidad.toLowerCase()}`
+    const actual = grupos.get(clave) ?? { descripcion: item.tipo_elemento.trim(), unidad, cantidad: 0, observaciones: new Set<string>(), empresasSedes: new Set<string>() }
+    actual.cantidad += Number(item.cantidad) || 0
+    if (item.observacion?.trim()) actual.observaciones.add(item.observacion.trim())
+    const es = [item.empresa, item.sede].filter(Boolean).join(' - ')
+    if (es) actual.empresasSedes.add(es)
+    grupos.set(clave, actual)
+  }
+  const filas = Array.from(grupos.values())
+
+  ws.getCell('G10').value = opts.solicitante.toUpperCase()
+  ws.getCell('G12').value = null
+  ws.getCell('B15').value = null
+  ws.getCell('E15').value = null
+  ws.getCell('G15').value = new Date()
+  ws.getCell('B18').value = 'RED-Gestión SST'
+  ws.getCell('E18').value = 'SST'
+  ws.getCell('G18').value = null
+  ws.getCell('I18').value = null
+
+  const filaBase = 22
+  const filasPlantilla = 5
+  const visibles = filas.slice(0, filasPlantilla)
+  const desbordadas = filas.slice(filasPlantilla)
+
+  visibles.forEach((f, i) => {
+    const fila = filaBase + i
+    ws.getCell(`B${fila}`).value = i + 1
+    ws.getCell(`D${fila}`).value = f.descripcion
+    ws.getCell(`I${fila}`).value = f.unidad || null
+    ws.getCell(`J${fila}`).value = f.cantidad
+    let especificaciones = Array.from(f.observaciones).join(' · ')
+    if (f.empresasSedes.size > 0) especificaciones = [especificaciones, `(${Array.from(f.empresasSedes).join('; ')})`].filter(Boolean).join(' ')
+    if (desbordadas.length > 0 && i === visibles.length - 1) {
+      const extra = desbordadas.map((d) => `${d.descripcion}: ${d.cantidad}${d.unidad ? ` ${d.unidad}` : ''}`).join(' · ')
+      especificaciones = [especificaciones, `+ ${desbordadas.length} ítem(s) adicional(es) — ${extra}`].filter(Boolean).join(' | ')
+    }
+    ws.getCell(`G${fila}`).value = especificaciones || null
+  })
+
+  ws.getCell('B30').value =
+    'Solicitud generada automáticamente desde el módulo de Inspecciones SST — reposición de elementos registrados en rondas de inspección.'
+
+  const buffer = await wb.xlsx.writeBuffer()
+  descargar(new Blob([buffer]), `solicitud_compras_sst_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  return { desbordados: desbordadas.length }
+}
+
+export type ItemCompromisoActa = {
+  descripcion: string
+  responsable: string | null
+  fecha_compromiso: string
+}
+
+/**
+ * Exporta compromisos de rondas SST a la plantilla institucional de Acta de Reunión
+ * (`FT-SST-005`), llenando solo la tabla de COMPROMISOS y los datos generales básicos
+ * (fecha, tema, responsable). Los datos propios de una reunión real (asistentes, temas
+ * tratados, observaciones) se dejan en blanco — este uso es para registrar compromisos,
+ * no una reunión específica.
+ */
+export async function exportarPlantillaCompromisos(opts: { items: ItemCompromisoActa[]; responsableActa: string }) {
+  const wb = await cargarPlantilla('compromisos.xlsx')
+  const ws = wb.getWorksheet('Acta de Reunion')
+  if (!ws) throw new Error('La plantilla de compromisos no tiene la hoja esperada.')
+
+  ws.getCell('C7').value = new Date()
+  ws.getCell('E7').value = null
+  ws.getCell('C8').value = null
+  ws.getCell('E8').value = null
+  ws.getCell('C9').value = 'Seguimiento de compromisos de rondas SST'
+  ws.getCell('C10').value = opts.responsableActa
+
+  for (let fila = 14; fila <= 22; fila++) {
+    ws.getCell(`B${fila}`).value = null
+    ws.getCell(`C${fila}`).value = null
+    ws.getCell(`D${fila}`).value = null
+  }
+  for (let fila = 25; fila <= 34; fila++) {
+    ws.getCell(`B${fila}`).value = null
+    ws.getCell(`F${fila}`).value = null
+  }
+  ws.getCell('B36').value = null
+
+  const filaBase = 43
+  const filasPlantilla = 4
+  const extra = Math.max(opts.items.length - filasPlantilla, 0)
+  if (extra > 0) {
+    ws.duplicateRow(filaBase + filasPlantilla - 1, extra, true)
+    // La celda C de las filas nuevas queda con el valor de ejemplo duplicado (la combinación B:C
+    // de esta plantilla no se puede recrear con ExcelJS sin corromper el archivo) — se limpia para
+    // que no se vea texto viejo junto a la columna B con el compromiso real.
+    for (let i = 1; i <= extra; i++) {
+      ws.getCell(`C${filaBase + filasPlantilla - 1 + i}`).value = null
+    }
+  }
+  opts.items.forEach((item, i) => {
+    const fila = filaBase + i
+    ws.getCell(`B${fila}`).value = item.descripcion
+    ws.getCell(`D${fila}`).value = new Date(`${item.fecha_compromiso}T00:00:00`)
+    ws.getCell(`E${fila}`).value = item.responsable ?? ''
+  })
+  for (let i = opts.items.length; i < filasPlantilla; i++) {
+    const fila = filaBase + i
+    ws.getCell(`B${fila}`).value = null
+    ws.getCell(`D${fila}`).value = null
+    ws.getCell(`E${fila}`).value = null
+  }
+
+  const buffer = await wb.xlsx.writeBuffer()
+  descargar(new Blob([buffer]), `acta_compromisos_sst_${new Date().toISOString().slice(0, 10)}.xlsx`)
+}

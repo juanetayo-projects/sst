@@ -18,29 +18,38 @@ export function MetricCard({
   icono: Icono,
   sub,
   color = "azul",
+  compacto = false,
 }: {
   titulo: string;
   valor: ReactNode;
   icono?: LucideIcon;
   sub?: string;
   color?: ColorKpi;
+  /** Versión reducida (ícono y tipografía más pequeños, menos padding) para paneles con poco espacio vertical. */
+  compacto?: boolean;
 }) {
   return (
     <div
-      className="flex items-center gap-3.5 rounded-2xl p-4 shadow-relieve transition-all hover:-translate-y-0.5 hover:shadow-relieve-hover"
+      className={cn(
+        "flex items-center shadow-relieve transition-all hover:-translate-y-0.5 hover:shadow-relieve-hover",
+        compacto ? "gap-2.5 rounded-xl p-2.5" : "gap-3.5 rounded-2xl p-4"
+      )}
       style={{ backgroundImage: `var(--kpi-${color}-fondo)` }}
     >
       {Icono && (
         <div
-          className="flex size-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-relieve-sm"
+          className={cn(
+            "flex shrink-0 items-center justify-center text-white shadow-relieve-sm",
+            compacto ? "size-8 rounded-xl" : "size-11 rounded-2xl"
+          )}
           style={{ backgroundImage: `var(--kpi-${color}-icono)` }}
         >
-          <Icono className="size-5" />
+          <Icono className={compacto ? "size-4" : "size-5"} />
         </div>
       )}
       <div className="min-w-0">
-        <div className={cn("text-2xl font-extrabold tabular leading-tight", TEXTO_KPI[color])}>{valor}</div>
-        <div className="text-xs font-semibold text-muted-foreground">{titulo}</div>
+        <div className={cn("font-extrabold tabular leading-tight", compacto ? "text-lg" : "text-2xl", TEXTO_KPI[color])}>{valor}</div>
+        <div className={cn("font-semibold text-muted-foreground", compacto ? "text-[11px]" : "text-xs")}>{titulo}</div>
         {sub && <div className="text-[10px] text-muted-foreground/80">{sub}</div>}
       </div>
     </div>

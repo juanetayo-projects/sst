@@ -4,7 +4,7 @@ import { FileSpreadsheet, PackageCheck, ShoppingCart, Plus, Pencil, Trash2 } fro
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { formatearFecha } from '@/lib/utils'
-import { exportarExcel } from '@/lib/exportar'
+import { exportarPlantillaCompras } from '@/lib/exportar'
 import type { TipoInspeccion } from '@/domain/inspecciones'
 import { PageHeader, FilterBar, MetricCard } from '@/components/ui'
 import { Card } from '@/components/ui/card'
@@ -113,29 +113,15 @@ export default function SolicitudesCompra() {
     const items = filas.filter((f) => seleccionadas.has(f.id))
     if (items.length === 0) return
     setGenerando(true)
-    await exportarExcel({
-      nombreArchivo: 'solicitudes_compra',
-      titulo: 'Solicitudes de compra — SST',
-      subtitulo: `${items.length} ítem(s) · generado ${formatearFecha(new Date().toISOString())}`,
-      columnas: [
-        { header: 'Fecha', key: 'fecha', width: 12 },
-        { header: 'Ronda', key: 'ronda', width: 30 },
-        { header: 'Empresa', key: 'empresa', width: 20 },
-        { header: 'Sede', key: 'sede', width: 22 },
-        { header: 'Elemento', key: 'elemento', width: 30 },
-        { header: 'Cantidad', key: 'cantidad', width: 10 },
-        { header: 'UM', key: 'um', width: 12 },
-        { header: 'Observación', key: 'observacion', width: 34 },
-      ],
-      filas: items.map((f) => ({
-        fecha: formatearFecha(f.fecha),
-        ronda: f.inspecciones?.tipos_inspeccion?.nombre ?? '—',
-        empresa: f.inspecciones?.empresa ?? '—',
-        sede: f.inspecciones?.sede ?? '—',
-        elemento: f.tipo_elemento,
+    const { desbordados } = await exportarPlantillaCompras({
+      solicitante: perfil?.nombre_completo ?? 'Sistema de Inspecciones SST',
+      items: items.map((f) => ({
+        tipo_elemento: f.tipo_elemento,
         cantidad: f.cantidad,
-        um: f.unidad_medida ?? '',
-        observacion: f.observacion ?? '',
+        unidad_medida: f.unidad_medida,
+        observacion: f.observacion,
+        empresa: f.inspecciones?.empresa ?? null,
+        sede: f.inspecciones?.sede ?? null,
       })),
     })
 
@@ -145,7 +131,15 @@ export default function SolicitudesCompra() {
     }
     setGenerando(false)
     setSeleccionadas(new Set())
-    setMensaje({ tipo: 'exito', titulo: 'Excel generado', texto: `Se exportaron ${items.length} ítem(s)${idsPendientes.length > 0 ? ` y se marcaron ${idsPendientes.length} como "Solicitado"` : ''}.` })
+    const textoBase = `Se generó la plantilla de Compras con ${items.length} ítem(s)${idsPendientes.length > 0 ? ` y se marcaron ${idsPendientes.length} como "Solicitado"` : ''}.`
+    setMensaje({
+      tipo: 'exito',
+      titulo: 'Plantilla generada',
+      texto:
+        desbordados > 0
+          ? `${textoBase} La plantilla oficial solo tiene 5 filas de ítems — ${desbordados} elemento(s) repetido(s) se listaron como texto adicional en la fila 5, columna "Especificaciones".`
+          : textoBase,
+    })
     cargar()
   }
 

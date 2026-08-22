@@ -705,11 +705,11 @@ export default function ProgramacionRondas() {
               <CalendarClock className="size-5 text-white" />
               <DialogTitle className="text-white">Programar ronda</DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-1 gap-x-5 gap-y-3 md:grid-cols-2">
-              <div className="space-y-3">
-                <div className="space-y-1.5">
+            <div className="grid grid-cols-1 gap-x-5 gap-y-2.5 md:grid-cols-2">
+              <div className="space-y-2.5">
+                <div className="space-y-1">
                   <Label>Tipo(s) de ronda</Label>
-                  <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+                  <div className="max-h-24 space-y-1 overflow-y-auto rounded-lg border border-border p-1.5">
                     {tipos.map((t) => (
                       <label key={t.id} className="flex items-center gap-2 text-sm">
                         <Checkbox
@@ -728,7 +728,7 @@ export default function ProgramacionRondas() {
                     ))}
                   </div>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label>Fecha(s)</Label>
                   <p className="text-xs text-muted-foreground">Haz clic en los días que quieras programar — puedes elegir varios; un segundo clic los quita.</p>
                   <MiniCalendarioSeleccion
@@ -743,7 +743,7 @@ export default function ProgramacionRondas() {
                     }
                   />
                   {fechasProgramar.size > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex max-h-16 flex-wrap gap-1.5 overflow-y-auto">
                       {Array.from(fechasProgramar)
                         .sort()
                         .map((iso) => (
@@ -769,8 +769,8 @@ export default function ProgramacionRondas() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="space-y-1.5">
+              <div className="space-y-2.5">
+                <div className="space-y-1">
                   <Label>Empresa (opcional)</Label>
                   <Select value={empresaProgramar || TODOS} onValueChange={(v) => setEmpresaProgramar(v === TODOS ? '' : v)}>
                     <SelectTrigger>
@@ -786,7 +786,7 @@ export default function ProgramacionRondas() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label>Sede (opcional)</Label>
                   <Select value={sedeProgramar || TODOS} onValueChange={(v) => setSedeProgramar(v === TODOS ? '' : v)}>
                     <SelectTrigger>
@@ -802,7 +802,7 @@ export default function ProgramacionRondas() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label>Responsable (opcional)</Label>
                   <Select value={responsableProgramar || TODOS} onValueChange={(v) => setResponsableProgramar(v === TODOS ? '' : v)}>
                     <SelectTrigger>
@@ -818,9 +818,9 @@ export default function ProgramacionRondas() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label>Notas (opcional)</Label>
-                  <Textarea rows={4} value={notasProgramar} onChange={(e) => setNotasProgramar(e.target.value)} />
+                  <Textarea rows={2} value={notasProgramar} onChange={(e) => setNotasProgramar(e.target.value)} />
                 </div>
               </div>
             </div>

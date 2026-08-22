@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, ListChecks, Plus, Pencil, Trash2 } from 'lucide-react'
+import { CheckCircle2, ListChecks, Plus, Pencil, Trash2, FileSpreadsheet } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { formatearFecha } from '@/lib/utils'
+import { exportarPlantillaCompromisos } from '@/lib/exportar'
 import type { TipoInspeccion } from '@/domain/inspecciones'
 import { PageHeader, FilterBar, MetricCard } from '@/components/ui'
 import { Card } from '@/components/ui/card'
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -23,6 +25,7 @@ type Compromiso = {
   responsable: string | null
   fecha_compromiso: string
   estado: 'pendiente' | 'cumplido'
+  exportado_acta: boolean
   inspeccion_id: string
   inspecciones: { empresa: string | null; sede: string | null; tipo_inspeccion_id: string; tipos_inspeccion: { nombre: string } | null } | null
 }
@@ -65,6 +68,9 @@ export default function Compromisos() {
   const [aEliminar, setAEliminar] = useState<Compromiso | null>(null)
   const [eliminando, setEliminando] = useState(false)
 
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [exportando, setExportando] = useState(false)
+
   useEffect(() => {
     supabase.from('tipos_inspeccion').select('*').eq('activo', true).order('orden').then(({ data }) => setTipos((data ?? []) as TipoInspeccion[]))
     supabase
@@ -79,7 +85,7 @@ export default function Compromisos() {
     setCargando(true)
     let q = supabase
       .from('compromisos_ronda')
-      .select('id,descripcion,responsable,fecha_compromiso,estado,inspeccion_id,inspecciones(empresa,sede,tipo_inspeccion_id,tipos_inspeccion(nombre))')
+      .select('id,descripcion,responsable,fecha_compromiso,estado,exportado_acta,inspeccion_id,inspecciones(empresa,sede,tipo_inspeccion_id,tipos_inspeccion(nombre))')
       .order('fecha_compromiso', { ascending: true })
     if (desde) q = q.gte('fecha_compromiso', desde)
     if (hasta) q = q.lte('fecha_compromiso', hasta)
@@ -161,16 +167,52 @@ export default function Compromisos() {
     cargar()
   }
 
+  function alternarSeleccion(id: string) {
+    setSeleccionados((prev) => {
+      const copia = new Set(prev)
+      if (copia.has(id)) copia.delete(id)
+      else copia.add(id)
+      return copia
+    })
+  }
+
+  async function exportarActa() {
+    const items = filas.filter((f) => seleccionados.has(f.id))
+    if (items.length === 0) return
+    setExportando(true)
+    await exportarPlantillaCompromisos({
+      responsableActa: perfil?.nombre_completo ?? 'Sistema de Inspecciones SST',
+      items: items.map((f) => ({ descripcion: f.descripcion, responsable: f.responsable, fecha_compromiso: f.fecha_compromiso })),
+    })
+    await supabase
+      .from('compromisos_ronda')
+      .update({ exportado_acta: true })
+      .in(
+        'id',
+        items.map((f) => f.id)
+      )
+    setExportando(false)
+    setSeleccionados(new Set())
+    setMensaje({ tipo: 'exito', titulo: 'Acta generada', texto: `Se exportaron ${items.length} compromiso(s) a la plantilla de Acta y quedaron marcados como diligenciados.` })
+    cargar()
+  }
+
   return (
     <div>
       <PageHeader
         titulo="Compromisos de ronda"
         acciones={
           esAdmin && (
-            <Button size="sm" onClick={abrirNuevo}>
-              <Plus />
-              Nuevo compromiso
-            </Button>
+            <>
+              <Button variant="outline" size="sm" disabled={seleccionados.size === 0} cargando={exportando} onClick={exportarActa}>
+                <FileSpreadsheet />
+                Exportar a Acta de Compromisos {seleccionados.size > 0 ? `(${seleccionados.size})` : ''}
+              </Button>
+              <Button size="sm" onClick={abrirNuevo}>
+                <Plus />
+                Nuevo compromiso
+              </Button>
+            </>
           )
         }
       />
@@ -236,6 +278,14 @@ export default function Compromisos() {
           <table className="w-full text-sm">
             <thead>
               <tr className="franja-institucional text-left text-xs text-white">
+                {esAdmin && (
+                  <th className="w-8 px-3 py-2.5">
+                    <Checkbox
+                      checked={filas.length > 0 && seleccionados.size === filas.length}
+                      onCheckedChange={(v) => setSeleccionados(v === true ? new Set(filas.map((f) => f.id)) : new Set())}
+                    />
+                  </th>
+                )}
                 <th className="px-3 py-2.5 font-semibold">Fecha compromiso</th>
                 <th className="px-3 py-2.5 font-semibold">Ronda</th>
                 <th className="px-3 py-2.5 font-semibold">Empresa / Sede</th>
@@ -248,6 +298,11 @@ export default function Compromisos() {
             <tbody>
               {filas.map((c, i) => (
                 <tr key={c.id} className="border-b border-border/60 last:border-0" style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}>
+                  {esAdmin && (
+                    <td className="px-3 py-2">
+                      <Checkbox checked={seleccionados.has(c.id)} onCheckedChange={() => alternarSeleccion(c.id)} />
+                    </td>
+                  )}
                   <td className="px-3 py-2">{formatearFecha(c.fecha_compromiso)}</td>
                   <td className="px-3 py-2">
                     <Link to={`/inspecciones/${c.inspeccion_id}`} className="hover:underline">
@@ -260,7 +315,10 @@ export default function Compromisos() {
                   <td className="px-3 py-2">{c.descripcion}</td>
                   <td className="px-3 py-2 text-muted-foreground">{c.responsable ?? '—'}</td>
                   <td className="px-3 py-2">
-                    <EstadoBadge c={c} />
+                    <div className="flex flex-wrap items-center gap-1">
+                      <EstadoBadge c={c} />
+                      {c.exportado_acta && <Badge tono="info">Diligenciado</Badge>}
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-1">
@@ -285,7 +343,7 @@ export default function Compromisos() {
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
+                  <td colSpan={esAdmin ? 8 : 7} className="px-3 py-6 text-center text-muted-foreground">
                     Sin compromisos con estos filtros.
                   </td>
                 </tr>
