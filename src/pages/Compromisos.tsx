@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -31,6 +32,11 @@ type Compromiso = {
 }
 
 type InspeccionOpcion = { id: string; fecha_inspeccion: string; empresa: string | null; sede: string | null; tipos_inspeccion: { nombre: string } | null }
+type AsistenteForm = { nombre: string; empresaCargo: string; contacto: string }
+type TemaForm = { tema: string; tiempo: string }
+
+const ASISTENTE_VACIO: AsistenteForm = { nombre: '', empresaCargo: '', contacto: '' }
+const TEMA_VACIO: TemaForm = { tema: '', tiempo: '' }
 
 const TODOS = '__todos__'
 const hoyISO = new Date().toISOString().slice(0, 10)
@@ -70,6 +76,10 @@ export default function Compromisos() {
 
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [exportando, setExportando] = useState(false)
+  const [modalActaAbierto, setModalActaAbierto] = useState(false)
+  const [asistentes, setAsistentes] = useState<AsistenteForm[]>([{ ...ASISTENTE_VACIO }])
+  const [temas, setTemas] = useState<TemaForm[]>([{ ...TEMA_VACIO }])
+  const [observaciones, setObservaciones] = useState('')
 
   useEffect(() => {
     supabase.from('tipos_inspeccion').select('*').eq('activo', true).order('orden').then(({ data }) => setTipos((data ?? []) as TipoInspeccion[]))
@@ -176,13 +186,33 @@ export default function Compromisos() {
     })
   }
 
-  async function exportarActa() {
+  function abrirModalActa() {
+    setAsistentes([{ ...ASISTENTE_VACIO }])
+    setTemas([{ ...TEMA_VACIO }])
+    setObservaciones('')
+    setModalActaAbierto(true)
+  }
+
+  function actualizarAsistente(i: number, cambios: Partial<AsistenteForm>) {
+    setAsistentes((prev) => prev.map((a, idx) => (idx === i ? { ...a, ...cambios } : a)))
+  }
+  function actualizarTema(i: number, cambios: Partial<TemaForm>) {
+    setTemas((prev) => prev.map((t, idx) => (idx === i ? { ...t, ...cambios } : t)))
+  }
+
+  async function exportarActa(e: FormEvent) {
+    e.preventDefault()
     const items = filas.filter((f) => seleccionados.has(f.id))
     if (items.length === 0) return
     setExportando(true)
     await exportarPlantillaCompromisos({
       responsableActa: perfil?.nombre_completo ?? 'Sistema de Inspecciones SST',
       items: items.map((f) => ({ descripcion: f.descripcion, responsable: f.responsable, fecha_compromiso: f.fecha_compromiso })),
+      asistentes: asistentes
+        .filter((a) => a.nombre.trim())
+        .map((a) => ({ nombre: a.nombre.trim(), empresaCargo: a.empresaCargo.trim(), contacto: a.contacto.trim() })),
+      temasTratados: temas.filter((t) => t.tema.trim()).map((t) => ({ tema: t.tema.trim(), tiempo: t.tiempo.trim() })),
+      observaciones,
     })
     await supabase
       .from('compromisos_ronda')
@@ -193,6 +223,7 @@ export default function Compromisos() {
       )
     setExportando(false)
     setSeleccionados(new Set())
+    setModalActaAbierto(false)
     setMensaje({ tipo: 'exito', titulo: 'Acta generada', texto: `Se exportaron ${items.length} compromiso(s) a la plantilla de Acta y quedaron marcados como diligenciados.` })
     cargar()
   }
@@ -204,7 +235,7 @@ export default function Compromisos() {
         acciones={
           esAdmin && (
             <>
-              <Button variant="outline" size="sm" disabled={seleccionados.size === 0} cargando={exportando} onClick={exportarActa}>
+              <Button variant="outline" size="sm" disabled={seleccionados.size === 0} onClick={abrirModalActa}>
                 <FileSpreadsheet />
                 Exportar a Acta de Compromisos {seleccionados.size > 0 ? `(${seleccionados.size})` : ''}
               </Button>
@@ -409,6 +440,94 @@ export default function Compromisos() {
               </Button>
               <Button type="submit" cargando={guardando} disabled={!editando && !form.inspeccion_id}>
                 Guardar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={modalActaAbierto} onOpenChange={setModalActaAbierto}>
+        <DialogContent className="max-w-2xl">
+          <form onSubmit={exportarActa}>
+            <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+              <FileSpreadsheet className="size-5 text-white" />
+              <DialogTitle className="text-white">Datos del Acta de Compromisos</DialogTitle>
+            </DialogHeader>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Se exportarán {seleccionados.size} compromiso(s) seleccionado(s). Completa los datos de la reunión — puedes dejar filas vacías, no se
+              incluyen en el Excel.
+            </p>
+            <div className="max-h-[65vh] space-y-4 overflow-y-auto pr-1">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label>Asistentes</Label>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setAsistentes((prev) => [...prev, { ...ASISTENTE_VACIO }])}>
+                    <Plus className="size-3.5" />
+                    Agregar
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  {asistentes.map((a, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5">
+                      <Input placeholder="Nombre" value={a.nombre} onChange={(e) => actualizarAsistente(i, { nombre: e.target.value })} />
+                      <Input
+                        placeholder="Empresa / Cargo"
+                        value={a.empresaCargo}
+                        onChange={(e) => actualizarAsistente(i, { empresaCargo: e.target.value })}
+                      />
+                      <Input placeholder="No. Contacto" value={a.contacto} onChange={(e) => actualizarAsistente(i, { contacto: e.target.value })} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        title="Quitar"
+                        onClick={() => setAsistentes((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev))}
+                      >
+                        <Trash2 className="size-3.5 text-[var(--error)]" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label>Temas tratados</Label>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setTemas((prev) => [...prev, { ...TEMA_VACIO }])}>
+                    <Plus className="size-3.5" />
+                    Agregar
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  {temas.map((t, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_100px_auto] gap-1.5">
+                      <Input placeholder="Tema" value={t.tema} onChange={(e) => actualizarTema(i, { tema: e.target.value })} />
+                      <Input placeholder="Tiempo (ej. 10m)" value={t.tiempo} onChange={(e) => actualizarTema(i, { tiempo: e.target.value })} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        title="Quitar"
+                        onClick={() => setTemas((prev) => (prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev))}
+                      >
+                        <Trash2 className="size-3.5 text-[var(--error)]" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="acta-observaciones">Observaciones del compromiso</Label>
+                <Textarea id="acta-observaciones" rows={3} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
+              </div>
+            </div>
+            <DialogFooter className="mt-5">
+              <Button type="button" variant="outline" onClick={() => setModalActaAbierto(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" cargando={exportando}>
+                Generar Acta
               </Button>
             </DialogFooter>
           </form>

@@ -336,14 +336,25 @@ export type ItemCompromisoActa = {
   fecha_compromiso: string
 }
 
+export type AsistenteActa = { nombre: string; empresaCargo: string; contacto: string }
+export type TemaTratadoActa = { tema: string; tiempo: string }
+
 /**
  * Exporta compromisos de rondas SST a la plantilla institucional de Acta de Reunión
- * (`FT-SST-005`), llenando solo la tabla de COMPROMISOS y los datos generales básicos
- * (fecha, tema, responsable). Los datos propios de una reunión real (asistentes, temas
- * tratados, observaciones) se dejan en blanco — este uso es para registrar compromisos,
- * no una reunión específica.
+ * (`FT-SST-005`), llenando la tabla de COMPROMISOS, los datos generales básicos
+ * (fecha, tema, responsable), y los asistentes / temas tratados / observaciones que
+ * indique quien exporta. La plantilla trae 9 filas de asistentes y 10 de temas tratados
+ * ya diseñadas (con celdas combinadas por fila); igual que en la plantilla de compras,
+ * insertar filas nuevas en esas dos tablas corrompe el archivo, así que si sobran
+ * asistentes o temas se listan como texto adicional en la última fila disponible.
  */
-export async function exportarPlantillaCompromisos(opts: { items: ItemCompromisoActa[]; responsableActa: string }) {
+export async function exportarPlantillaCompromisos(opts: {
+  items: ItemCompromisoActa[]
+  responsableActa: string
+  asistentes: AsistenteActa[]
+  temasTratados: TemaTratadoActa[]
+  observaciones: string
+}) {
   const wb = await cargarPlantilla('compromisos.xlsx')
   const ws = wb.getWorksheet('Acta de Reunion')
   if (!ws) throw new Error('La plantilla de compromisos no tiene la hoja esperada.')
@@ -355,16 +366,40 @@ export async function exportarPlantillaCompromisos(opts: { items: ItemCompromiso
   ws.getCell('C9').value = 'Seguimiento de compromisos de rondas SST'
   ws.getCell('C10').value = opts.responsableActa
 
-  for (let fila = 14; fila <= 22; fila++) {
-    ws.getCell(`B${fila}`).value = null
-    ws.getCell(`C${fila}`).value = null
-    ws.getCell(`D${fila}`).value = null
+  const asistentesFilaBase = 14
+  const asistentesFilasPlantilla = 9
+  const asistentesVisibles = opts.asistentes.slice(0, asistentesFilasPlantilla)
+  const asistentesDesbordados = opts.asistentes.slice(asistentesFilasPlantilla)
+  for (let i = 0; i < asistentesFilasPlantilla; i++) {
+    const fila = asistentesFilaBase + i
+    const a = asistentesVisibles[i]
+    ws.getCell(`B${fila}`).value = a?.nombre || null
+    ws.getCell(`D${fila}`).value = a?.contacto || null
+    let empresaCargo = a?.empresaCargo || null
+    if (asistentesDesbordados.length > 0 && i === asistentesFilasPlantilla - 1) {
+      const extra = asistentesDesbordados.map((d) => `${d.nombre}${d.empresaCargo ? ` (${d.empresaCargo})` : ''}`).join('; ')
+      empresaCargo = [empresaCargo, `+ ${asistentesDesbordados.length} adicional(es): ${extra}`].filter(Boolean).join(' | ')
+    }
+    ws.getCell(`C${fila}`).value = empresaCargo
   }
-  for (let fila = 25; fila <= 34; fila++) {
-    ws.getCell(`B${fila}`).value = null
-    ws.getCell(`F${fila}`).value = null
+
+  const temasFilaBase = 25
+  const temasFilasPlantilla = 10
+  const temasVisibles = opts.temasTratados.slice(0, temasFilasPlantilla)
+  const temasDesbordados = opts.temasTratados.slice(temasFilasPlantilla)
+  for (let i = 0; i < temasFilasPlantilla; i++) {
+    const fila = temasFilaBase + i
+    const t = temasVisibles[i]
+    let tema = t?.tema || null
+    if (temasDesbordados.length > 0 && i === temasFilasPlantilla - 1) {
+      const extra = temasDesbordados.map((d) => d.tema).join('; ')
+      tema = [tema, `+ ${temasDesbordados.length} tema(s) adicional(es): ${extra}`].filter(Boolean).join(' | ')
+    }
+    ws.getCell(`B${fila}`).value = tema
+    ws.getCell(`F${fila}`).value = t?.tiempo || null
   }
-  ws.getCell('B36').value = null
+
+  ws.getCell('B36').value = opts.observaciones.trim() || null
 
   const filaBase = 43
   const filasPlantilla = 4
