@@ -144,7 +144,7 @@ export default function Compromisos() {
     }
     const { error } = editando
       ? await supabase.from('compromisos_ronda').update(payload).eq('id', editando.id)
-      : await supabase.from('compromisos_ronda').insert({ ...payload, inspeccion_id: form.inspeccion_id })
+      : await supabase.from('compromisos_ronda').insert({ ...payload, inspeccion_id: form.inspeccion_id, created_by: session?.user.id })
     setGuardando(false)
     if (error) {
       setMensaje({ tipo: 'error', titulo: 'No se pudo guardar', texto: error.message })

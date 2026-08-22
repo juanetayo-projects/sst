@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const [extintoresAlerta, setExtintoresAlerta] = useState<ExtintorAlerta[]>([])
   const [empresaFiltro, setEmpresaFiltro] = useState(TODOS)
   const [sedeFiltro, setSedeFiltro] = useState(TODOS)
-  const [estadoFiltro, setEstadoFiltro] = useState(TODOS)
+  const [estadoFiltro, setEstadoFiltro] = useState('proximo')
 
   useEffect(() => {
     const hoyISO = new Date().toISOString().slice(0, 10)

@@ -40,7 +40,7 @@ const ETIQUETA_ESTADO = { pendiente: 'Pendiente', solicitado: 'Solicitado', reci
 const FORM_VACIO = { inspeccion_id: '', fecha: new Date().toISOString().slice(0, 10), tipo_elemento: '', cantidad: '1', unidad_medida: '', observacion: '', estado: 'pendiente' as Solicitud['estado'] }
 
 export default function SolicitudesCompra() {
-  const { perfil } = useAuth()
+  const { session, perfil } = useAuth()
   const esAdmin = perfil?.role === 'admin'
 
   const [filas, setFilas] = useState<Solicitud[]>([])
@@ -182,7 +182,7 @@ export default function SolicitudesCompra() {
     }
     const { error } = editando
       ? await supabase.from('solicitudes_compra_item').update(payload).eq('id', editando.id)
-      : await supabase.from('solicitudes_compra_item').insert({ ...payload, inspeccion_id: form.inspeccion_id })
+      : await supabase.from('solicitudes_compra_item').insert({ ...payload, inspeccion_id: form.inspeccion_id, created_by: session?.user.id })
     setGuardando(false)
     if (error) {
       setMensaje({ tipo: 'error', titulo: 'No se pudo guardar', texto: error.message })

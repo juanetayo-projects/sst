@@ -845,35 +845,40 @@ export default function ProgramacionRondas() {
           </DialogHeader>
           <div className="space-y-2">
             {diaSeleccionado?.items.map((p) => (
-              <div key={p.id} className="rounded-lg border border-border p-2.5 text-sm" style={{ borderLeft: `3px solid ${colorCategoriaItem(p)}` }}>
+              <div key={p.id} className="rounded-lg border border-border p-2.5 text-sm">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="font-medium">{p.tipos_inspeccion?.nombre ?? '—'}</div>
-                    <div className="text-xs text-muted-foreground">
+                  <div className="min-w-0">
+                    <span
+                      className="inline-block rounded-md px-2 py-0.5 text-sm font-semibold text-white"
+                      style={{ backgroundColor: colorCategoriaItem(p) }}
+                    >
+                      {p.tipos_inspeccion?.nombre ?? '—'}
+                    </span>
+                    <div className="mt-1 text-xs text-muted-foreground">
                       {p.empresa ?? 'Sin empresa'} {p.sede ? `· ${p.sede}` : ''}
                       {p.responsable ? ` · ${p.responsable.nombre_completo}` : ''}
                     </div>
                   </div>
-                  <EstadoBadge p={p} />
-                </div>
-                {esAdmin && p.estado === 'pendiente' && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => marcarRealizada(p)}>
-                      <CheckCircle2 className="size-3.5" />
-                      Marcar realizada
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => abrirEditar(p)}>
-                      <CalendarCog className="size-3.5" />
-                      Reprogramar
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => cancelarProgramacion(p)}>
-                      Cancelar
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => eliminarProgramacion(p)}>
-                      <Trash2 className="size-3.5 text-[var(--error)]" />
-                    </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <EstadoBadge p={p} />
+                    {esAdmin && p.estado === 'pendiente' && (
+                      <>
+                        <Button size="icon" variant="ghost" title="Marcar realizada" onClick={() => marcarRealizada(p)}>
+                          <CheckCircle2 className="size-4 text-[var(--exito)]" />
+                        </Button>
+                        <Button size="icon" variant="ghost" title="Reprogramar" onClick={() => abrirEditar(p)}>
+                          <CalendarCog className="size-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" title="Cancelar" onClick={() => cancelarProgramacion(p)}>
+                          <XCircle className="size-4 text-muted-foreground" />
+                        </Button>
+                        <Button size="icon" variant="ghost" title="Eliminar" onClick={() => eliminarProgramacion(p)}>
+                          <Trash2 className="size-4 text-[var(--error)]" />
+                        </Button>
+                      </>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
