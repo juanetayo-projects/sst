@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Plus, ChevronLeft, ChevronRight, Trash2, CheckCircle2, XCircle, CalendarClock, CalendarCheck, CalendarX, Percent, X, FileSpreadsheet } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Trash2, Pencil, CheckCircle2, XCircle, CalendarClock, CalendarCheck, CalendarX, Percent, X, FileSpreadsheet, CalendarCog } from 'lucide-react'
 import { exportarExcel } from '@/lib/exportar'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { supabase } from '@/lib/supabase'
@@ -159,6 +159,10 @@ export default function ProgramacionRondas() {
   const [notasProgramar, setNotasProgramar] = useState('')
   const [guardandoProgramacion, setGuardandoProgramacion] = useState(false)
 
+  const [editando, setEditando] = useState<Programacion | null>(null)
+  const [formEditar, setFormEditar] = useState({ tipo_inspeccion_id: '', fecha_programada: '', empresa: '', sede: '', responsable_id: '', notas: '' })
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false)
+
   useEffect(() => {
     Promise.all([
       supabase.from('tipos_inspeccion').select('*').eq('activo', true).order('orden'),
@@ -240,6 +244,44 @@ export default function ProgramacionRondas() {
     setDiaSeleccionado(null)
   }
 
+  function abrirEditar(p: Programacion) {
+    setEditando(p)
+    setFormEditar({
+      tipo_inspeccion_id: p.tipo_inspeccion_id,
+      fecha_programada: p.fecha_programada,
+      empresa: p.empresa ?? '',
+      sede: p.sede ?? '',
+      responsable_id: p.responsable_id ?? '',
+      notas: p.notas ?? '',
+    })
+    setDiaSeleccionado(null)
+  }
+
+  async function guardarEdicion(e: FormEvent) {
+    e.preventDefault()
+    if (!editando) return
+    setGuardandoEdicion(true)
+    const { error } = await supabase
+      .from('programaciones_ronda')
+      .update({
+        tipo_inspeccion_id: formEditar.tipo_inspeccion_id,
+        fecha_programada: formEditar.fecha_programada,
+        empresa: formEditar.empresa || null,
+        sede: formEditar.sede || null,
+        responsable_id: formEditar.responsable_id || null,
+        notas: formEditar.notas || null,
+      })
+      .eq('id', editando.id)
+    setGuardandoEdicion(false)
+    if (error) {
+      setMensaje({ tipo: 'error', titulo: 'No se pudo guardar', texto: error.message })
+      return
+    }
+    setEditando(null)
+    setMensaje({ tipo: 'exito', titulo: 'Programación actualizada', texto: 'Los cambios se guardaron correctamente.' })
+    cargar()
+  }
+
   // ── Calendario ──
   const cal = useMemo(() => {
     const primerDia = new Date(mesCal.y, mesCal.m, 1)
@@ -261,10 +303,10 @@ export default function ProgramacionRondas() {
 
   function colorDia(items: Programacion[]) {
     if (items.length === 0) return null
-    if (items.some((p) => esVencida(p))) return { bg: 'var(--error-suave)', text: 'var(--error)' }
-    if (items.some((p) => p.estado === 'pendiente')) return { bg: 'var(--advertencia-suave)', text: '#8a6400' }
-    if (items.every((p) => p.estado === 'realizada')) return { bg: 'var(--exito-suave)', text: 'var(--exito)' }
-    return { bg: 'var(--neutro-suave)', text: 'var(--neutro)' }
+    if (items.some((p) => esVencida(p))) return { bg: 'var(--error-suave)', text: 'var(--error)', borde: 'var(--error)' }
+    if (items.some((p) => p.estado === 'pendiente')) return { bg: 'var(--advertencia-suave)', text: '#8a6400', borde: 'var(--advertencia)' }
+    if (items.every((p) => p.estado === 'realizada')) return { bg: 'var(--exito-suave)', text: 'var(--exito)', borde: 'var(--exito)' }
+    return { bg: 'var(--neutro-suave)', text: 'var(--neutro)', borde: 'var(--neutro)' }
   }
 
   // ── Estadísticas ──
@@ -433,49 +475,81 @@ export default function ProgramacionRondas() {
         ) : (
           <>
             <TabsContent value="calendario">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <button
-                      className="rounded px-2 py-1 text-sm hover:bg-accent"
-                      onClick={() => setMesCal((s) => (s.m === 0 ? { y: s.y - 1, m: 11 } : { y: s.y, m: s.m - 1 }))}
-                    >
-                      ‹
-                    </button>
-                    <span className="text-sm font-semibold capitalize text-[var(--cac-azul)]">
-                      {format(new Date(mesCal.y, mesCal.m, 1), 'MMMM yyyy', { locale: es })}
-                    </span>
-                    <button
-                      className="rounded px-2 py-1 text-sm hover:bg-accent"
-                      onClick={() => setMesCal((s) => (s.m === 11 ? { y: s.y + 1, m: 0 } : { y: s.y, m: s.m + 1 }))}
-                    >
-                      ›
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-                    {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
-                      <div key={d}>{d}</div>
+              <Card className="overflow-hidden">
+                <div className="franja-institucional flex items-center justify-between px-4 py-3">
+                  <button
+                    type="button"
+                    className="rounded-full p-1.5 text-white/90 transition-colors hover:bg-white/15 hover:text-white"
+                    onClick={() => setMesCal((s) => (s.m === 0 ? { y: s.y - 1, m: 11 } : { y: s.y, m: s.m - 1 }))}
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+                  <span className="text-sm font-semibold capitalize text-white">
+                    {format(new Date(mesCal.y, mesCal.m, 1), 'MMMM yyyy', { locale: es })}
+                  </span>
+                  <button
+                    type="button"
+                    className="rounded-full p-1.5 text-white/90 transition-colors hover:bg-white/15 hover:text-white"
+                    onClick={() => setMesCal((s) => (s.m === 11 ? { y: s.y + 1, m: 0 } : { y: s.y, m: s.m + 1 }))}
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                </div>
+                <CardContent className="p-3 sm:p-4">
+                  <div className="grid grid-cols-7 text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
+                      <div key={d} className="py-1.5">
+                        {d}
+                      </div>
                     ))}
                   </div>
-                  <div className="mt-1 grid grid-cols-7 gap-1">
+                  <div className="mt-1 grid grid-cols-7 gap-1.5 sm:gap-2">
                     {cal.map((c, i) => {
                       if (!c) return <div key={i} />
                       const color = colorDia(c.items)
+                      const iso = `${mesCal.y}-${String(mesCal.m + 1).padStart(2, '0')}-${String(c.dia).padStart(2, '0')}`
+                      const esHoy = iso === hoyISO
                       return (
                         <button
                           key={i}
-                          onClick={() => c.items.length > 0 && setDiaSeleccionado({ fecha: `${mesCal.y}-${String(mesCal.m + 1).padStart(2, '0')}-${String(c.dia).padStart(2, '0')}`, items: c.items })}
+                          type="button"
+                          onClick={() => c.items.length > 0 && setDiaSeleccionado({ fecha: iso, items: c.items })}
                           className={cn(
-                            'flex h-11 flex-col items-center justify-start gap-0.5 rounded p-1 text-xs sm:h-14',
-                            c.items.length > 0 ? 'cursor-pointer' : ''
+                            'flex h-12 flex-col items-center justify-start gap-0.5 rounded-lg border p-1 text-xs transition-shadow sm:h-16',
+                            c.items.length > 0 ? 'cursor-pointer hover:shadow-md' : 'cursor-default',
+                            esHoy ? 'ring-2 ring-[var(--cac-azul)] ring-offset-1' : ''
                           )}
-                          style={color ? { backgroundColor: color.bg, color: color.text } : undefined}
+                          style={{
+                            backgroundColor: color?.bg ?? 'var(--fila-par)',
+                            color: color?.text ?? 'var(--foreground)',
+                            borderColor: color?.borde ?? 'var(--border)',
+                          }}
                         >
-                          <span className="font-medium">{c.dia}</span>
-                          {c.items.length > 0 && <span className="text-[10px] font-bold">{c.items.length}</span>}
+                          <span className={cn('font-medium', esHoy && 'text-[var(--cac-azul)]')}>{c.dia}</span>
+                          {c.items.length > 0 && (
+                            <span
+                              className="rounded-full px-1.5 text-[10px] font-bold text-white"
+                              style={{ backgroundColor: color?.borde ?? 'var(--neutro)' }}
+                            >
+                              {c.items.length}
+                            </span>
+                          )}
                         </button>
                       )
                     })}
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                    {[
+                      { label: 'Vencida', color: 'var(--error)' },
+                      { label: 'Pendiente', color: 'var(--advertencia)' },
+                      { label: 'Realizada', color: 'var(--exito)' },
+                      { label: 'Cancelada', color: 'var(--neutro)' },
+                    ].map((l) => (
+                      <span key={l.label} className="flex items-center gap-1.5">
+                        <span className="size-2.5 rounded-full" style={{ backgroundColor: l.color }} />
+                        {l.label}
+                      </span>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -519,6 +593,9 @@ export default function ProgramacionRondas() {
                                   </Button>
                                 </>
                               )}
+                              <Button variant="ghost" size="icon" title="Editar" onClick={() => abrirEditar(p)}>
+                                <Pencil className="size-3.5" />
+                              </Button>
                               <Button variant="ghost" size="icon" title="Eliminar" onClick={() => eliminarProgramacion(p)}>
                                 <Trash2 className="size-3.5 text-[var(--error)]" />
                               </Button>
@@ -748,10 +825,11 @@ export default function ProgramacionRondas() {
       {/* Modal: detalle del día en el calendario */}
       <Dialog open={diaSeleccionado !== null} onOpenChange={(v) => !v && setDiaSeleccionado(null)}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{diaSeleccionado && formatearFecha(diaSeleccionado.fecha)}</DialogTitle>
+          <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+            <CalendarClock className="size-5 text-white" />
+            <DialogTitle className="text-white">{diaSeleccionado && formatearFecha(diaSeleccionado.fecha)}</DialogTitle>
           </DialogHeader>
-          <div className="mt-2 space-y-2">
+          <div className="space-y-2">
             {diaSeleccionado?.items.map((p) => (
               <div key={p.id} className="rounded-lg border border-border p-2.5 text-sm">
                 <div className="flex items-start justify-between gap-2">
@@ -765,10 +843,14 @@ export default function ProgramacionRondas() {
                   <EstadoBadge p={p} />
                 </div>
                 {esAdmin && p.estado === 'pendiente' && (
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => marcarRealizada(p)}>
                       <CheckCircle2 className="size-3.5" />
                       Marcar realizada
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => abrirEditar(p)}>
+                      <CalendarCog className="size-3.5" />
+                      Reprogramar
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => cancelarProgramacion(p)}>
                       Cancelar
@@ -781,6 +863,105 @@ export default function ProgramacionRondas() {
               </div>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: editar / reprogramar */}
+      <Dialog open={editando !== null} onOpenChange={(v) => !v && setEditando(null)}>
+        <DialogContent className="max-w-lg">
+          <form onSubmit={guardarEdicion}>
+            <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+              <CalendarCog className="size-5 text-white" />
+              <DialogTitle className="text-white">Editar programación</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Tipo de ronda</Label>
+                <Select value={formEditar.tipo_inspeccion_id} onValueChange={(v) => setFormEditar((f) => ({ ...f, tipo_inspeccion_id: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tipos.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-fecha">Fecha</Label>
+                <Input
+                  id="edit-fecha"
+                  type="date"
+                  required
+                  value={formEditar.fecha_programada}
+                  onChange={(e) => setFormEditar((f) => ({ ...f, fecha_programada: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Empresa (opcional)</Label>
+                <Select value={formEditar.empresa || TODOS} onValueChange={(v) => setFormEditar((f) => ({ ...f, empresa: v === TODOS ? '' : v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TODOS}>Sin definir</SelectItem>
+                    {empresas.map((e) => (
+                      <SelectItem key={e} value={e}>
+                        {e}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Sede (opcional)</Label>
+                <Select value={formEditar.sede || TODOS} onValueChange={(v) => setFormEditar((f) => ({ ...f, sede: v === TODOS ? '' : v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TODOS}>Sin definir</SelectItem>
+                    {sedes.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Responsable (opcional)</Label>
+                <Select value={formEditar.responsable_id || TODOS} onValueChange={(v) => setFormEditar((f) => ({ ...f, responsable_id: v === TODOS ? '' : v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TODOS}>Sin asignar</SelectItem>
+                    {perfiles.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nombre_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Notas (opcional)</Label>
+                <Textarea rows={3} value={formEditar.notas} onChange={(e) => setFormEditar((f) => ({ ...f, notas: e.target.value }))} />
+              </div>
+            </div>
+            <DialogFooter className="mt-5">
+              <Button type="button" variant="outline" onClick={() => setEditando(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" cargando={guardandoEdicion}>
+                Guardar cambios
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { FileSpreadsheet, PackageCheck, ShoppingCart } from 'lucide-react'
+import { FileSpreadsheet, PackageCheck, ShoppingCart, Plus, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { formatearFecha } from '@/lib/utils'
@@ -14,6 +14,8 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { MensajeDialog, type Mensaje } from '@/components/ui/mensaje-dialog'
 import { SkeletonTabla } from '@/components/ui/skeleton'
 
@@ -29,9 +31,13 @@ type Solicitud = {
   inspecciones: { empresa: string | null; sede: string | null; tipo_inspeccion_id: string; tipos_inspeccion: { nombre: string } | null } | null
 }
 
+type InspeccionOpcion = { id: string; fecha_inspeccion: string; empresa: string | null; sede: string | null; tipos_inspeccion: { nombre: string } | null }
+
 const TODOS = '__todos__'
 const TONO_ESTADO = { pendiente: 'advertencia', solicitado: 'info', recibido: 'exito' } as const
 const ETIQUETA_ESTADO = { pendiente: 'Pendiente', solicitado: 'Solicitado', recibido: 'Recibido' } as const
+
+const FORM_VACIO = { inspeccion_id: '', fecha: new Date().toISOString().slice(0, 10), tipo_elemento: '', cantidad: '1', unidad_medida: '', observacion: '', estado: 'pendiente' as Solicitud['estado'] }
 
 export default function SolicitudesCompra() {
   const { perfil } = useAuth()
@@ -50,8 +56,22 @@ export default function SolicitudesCompra() {
   const [seleccionadas, setSeleccionadas] = useState<Set<string>>(new Set())
   const [generando, setGenerando] = useState(false)
 
+  const [inspeccionesOpciones, setInspeccionesOpciones] = useState<InspeccionOpcion[]>([])
+  const [modalAbierto, setModalAbierto] = useState(false)
+  const [editando, setEditando] = useState<Solicitud | null>(null)
+  const [form, setForm] = useState(FORM_VACIO)
+  const [guardando, setGuardando] = useState(false)
+  const [aEliminar, setAEliminar] = useState<Solicitud | null>(null)
+  const [eliminando, setEliminando] = useState(false)
+
   useEffect(() => {
     supabase.from('tipos_inspeccion').select('*').eq('activo', true).order('orden').then(({ data }) => setTipos((data ?? []) as TipoInspeccion[]))
+    supabase
+      .from('inspecciones')
+      .select('id,fecha_inspeccion,empresa,sede,tipos_inspeccion(nombre)')
+      .order('fecha_inspeccion', { ascending: false })
+      .limit(100)
+      .then(({ data }) => setInspeccionesOpciones((data ?? []) as unknown as InspeccionOpcion[]))
   }, [])
 
   function cargar() {
@@ -134,16 +154,79 @@ export default function SolicitudesCompra() {
     cargar()
   }
 
+  function abrirNueva() {
+    setEditando(null)
+    setForm(FORM_VACIO)
+    setModalAbierto(true)
+  }
+
+  function abrirEditar(f: Solicitud) {
+    setEditando(f)
+    setForm({
+      inspeccion_id: f.inspeccion_id,
+      fecha: f.fecha,
+      tipo_elemento: f.tipo_elemento,
+      cantidad: String(f.cantidad),
+      unidad_medida: f.unidad_medida ?? '',
+      observacion: f.observacion ?? '',
+      estado: f.estado,
+    })
+    setModalAbierto(true)
+  }
+
+  async function guardar(e: FormEvent) {
+    e.preventDefault()
+    if (!editando && !form.inspeccion_id) return
+    setGuardando(true)
+    const payload = {
+      fecha: form.fecha,
+      tipo_elemento: form.tipo_elemento,
+      cantidad: Number(form.cantidad) || 1,
+      unidad_medida: form.unidad_medida || null,
+      observacion: form.observacion || null,
+      estado: form.estado,
+    }
+    const { error } = editando
+      ? await supabase.from('solicitudes_compra_item').update(payload).eq('id', editando.id)
+      : await supabase.from('solicitudes_compra_item').insert({ ...payload, inspeccion_id: form.inspeccion_id })
+    setGuardando(false)
+    if (error) {
+      setMensaje({ tipo: 'error', titulo: 'No se pudo guardar', texto: error.message })
+      return
+    }
+    setModalAbierto(false)
+    cargar()
+  }
+
+  async function eliminar() {
+    if (!aEliminar) return
+    setEliminando(true)
+    const { error } = await supabase.from('solicitudes_compra_item').delete().eq('id', aEliminar.id)
+    setEliminando(false)
+    setAEliminar(null)
+    if (error) {
+      setMensaje({ tipo: 'error', titulo: 'No se pudo eliminar', texto: error.message })
+      return
+    }
+    cargar()
+  }
+
   return (
     <div>
       <PageHeader
         titulo="Solicitudes de compra"
         acciones={
           esAdmin && (
-            <Button size="sm" disabled={seleccionadas.size === 0} cargando={generando} onClick={generarExcel}>
-              <FileSpreadsheet />
-              Generar Excel para Compras {seleccionadas.size > 0 ? `(${seleccionadas.size})` : ''}
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={abrirNueva}>
+                <Plus />
+                Nueva solicitud
+              </Button>
+              <Button size="sm" disabled={seleccionadas.size === 0} cargando={generando} onClick={generarExcel}>
+                <FileSpreadsheet />
+                Generar Excel para Compras {seleccionadas.size > 0 ? `(${seleccionadas.size})` : ''}
+              </Button>
+            </>
           )
         }
       />
@@ -254,11 +337,19 @@ export default function SolicitudesCompra() {
                   </td>
                   {esAdmin && (
                     <td className="px-3 py-2">
-                      {f.estado === 'solicitado' && (
-                        <Button variant="ghost" size="icon" title="Marcar recibido" onClick={() => marcarRecibido(f.id)}>
-                          <PackageCheck className="size-3.5 text-[var(--exito)]" />
+                      <div className="flex justify-end gap-1">
+                        {f.estado === 'solicitado' && (
+                          <Button variant="ghost" size="icon" title="Marcar recibido" onClick={() => marcarRecibido(f.id)}>
+                            <PackageCheck className="size-3.5 text-[var(--exito)]" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" title="Editar" onClick={() => abrirEditar(f)}>
+                          <Pencil className="size-3.5" />
                         </Button>
-                      )}
+                        <Button variant="ghost" size="icon" title="Eliminar" onClick={() => setAEliminar(f)}>
+                          <Trash2 className="size-3.5 text-[var(--error)]" />
+                        </Button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -274,6 +365,86 @@ export default function SolicitudesCompra() {
           </table>
         )}
       </Card>
+
+      <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
+        <DialogContent className="max-w-lg">
+          <form onSubmit={guardar}>
+            <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+              <ShoppingCart className="size-5 text-white" />
+              <DialogTitle className="text-white">{editando ? 'Editar solicitud' : 'Nueva solicitud'}</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {!editando && (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>Ronda de inspección</Label>
+                  <Select value={form.inspeccion_id} onValueChange={(v) => setForm((f) => ({ ...f, inspeccion_id: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona la ronda…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {inspeccionesOpciones.map((i) => (
+                        <SelectItem key={i.id} value={i.id}>
+                          {formatearFecha(i.fecha_inspeccion)} · {i.tipos_inspeccion?.nombre ?? '—'} · {i.empresa ?? 'Sin empresa'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="sol-fecha">Fecha</Label>
+                <Input id="sol-fecha" type="date" required value={form.fecha} onChange={(e) => setForm((f) => ({ ...f, fecha: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sol-estado">Estado</Label>
+                <Select value={form.estado} onValueChange={(v) => setForm((f) => ({ ...f, estado: v as Solicitud['estado'] }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pendiente">Pendiente</SelectItem>
+                    <SelectItem value="solicitado">Solicitado</SelectItem>
+                    <SelectItem value="recibido">Recibido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="sol-elemento">Elemento</Label>
+                <Input id="sol-elemento" required value={form.tipo_elemento} onChange={(e) => setForm((f) => ({ ...f, tipo_elemento: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sol-cantidad">Cantidad</Label>
+                <Input id="sol-cantidad" type="number" min="0" step="any" required value={form.cantidad} onChange={(e) => setForm((f) => ({ ...f, cantidad: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sol-um">Unidad de medida</Label>
+                <Input id="sol-um" value={form.unidad_medida} onChange={(e) => setForm((f) => ({ ...f, unidad_medida: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="sol-obs">Observación</Label>
+                <Input id="sol-obs" value={form.observacion} onChange={(e) => setForm((f) => ({ ...f, observacion: e.target.value }))} />
+              </div>
+            </div>
+            <DialogFooter className="mt-5">
+              <Button type="button" variant="outline" onClick={() => setModalAbierto(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" cargando={guardando} disabled={!editando && !form.inspeccion_id}>
+                Guardar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={aEliminar !== null}
+        titulo="Eliminar solicitud"
+        descripcion="Esta acción no se puede deshacer."
+        cargando={eliminando}
+        onConfirm={eliminar}
+        onCancel={() => setAEliminar(null)}
+      />
 
       <MensajeDialog mensaje={mensaje} onClose={() => setMensaje(null)} />
     </div>

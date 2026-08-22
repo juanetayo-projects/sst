@@ -1,21 +1,27 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Flame, FileSpreadsheet } from 'lucide-react'
+import { Flame, FileSpreadsheet, Plus, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
 import { formatearFecha } from '@/lib/utils'
 import { exportarExcel } from '@/lib/exportar'
 import { estadoVencimiento, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO, type EstadoVencimiento } from '@/lib/inventario'
 import { PageHeader, FilterBar, MetricCard } from '@/components/ui'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { MensajeDialog, type Mensaje } from '@/components/ui/mensaje-dialog'
 import { SkeletonTabla } from '@/components/ui/skeleton'
 
 type Extintor = {
   id: string
   codigo: string
+  empresa: string | null
   sede: string | null
   ubicacion: string | null
   tipo: string | null
@@ -25,23 +31,95 @@ type Extintor = {
 
 const TODOS = '__todos__'
 const ORDEN_ESTADO: Record<EstadoVencimiento, number> = { vencido: 0, proximo: 1, vigente: 2, sin_fecha: 3 }
+const FORM_VACIO = { codigo: '', empresa: '', sede: '', ubicacion: '', tipo: '', capacidad: '', fecha_vencimiento: '' }
 
 export default function Vencimientos() {
+  const { perfil } = useAuth()
+  const esAdmin = perfil?.role === 'admin'
+
   const [items, setItems] = useState<Extintor[]>([])
   const [cargando, setCargando] = useState(true)
   const [sede, setSede] = useState(TODOS)
   const [estadoFiltro, setEstadoFiltro] = useState(TODOS)
+  const [mensaje, setMensaje] = useState<Mensaje>(null)
 
-  useEffect(() => {
+  const [modalAbierto, setModalAbierto] = useState(false)
+  const [editando, setEditando] = useState<Extintor | null>(null)
+  const [form, setForm] = useState(FORM_VACIO)
+  const [guardando, setGuardando] = useState(false)
+  const [aEliminar, setAEliminar] = useState<Extintor | null>(null)
+  const [eliminando, setEliminando] = useState(false)
+
+  function cargar() {
+    setCargando(true)
     supabase
       .from('inventario_extintores')
-      .select('id,codigo,sede,ubicacion,tipo,capacidad,fecha_vencimiento')
+      .select('id,codigo,empresa,sede,ubicacion,tipo,capacidad,fecha_vencimiento')
       .eq('activo', true)
       .then(({ data }) => {
         setItems((data ?? []) as Extintor[])
         setCargando(false)
       })
-  }, [])
+  }
+
+  useEffect(cargar, [])
+
+  function abrirNuevo() {
+    setEditando(null)
+    setForm(FORM_VACIO)
+    setModalAbierto(true)
+  }
+
+  function abrirEditar(item: Extintor) {
+    setEditando(item)
+    setForm({
+      codigo: item.codigo,
+      empresa: item.empresa ?? '',
+      sede: item.sede ?? '',
+      ubicacion: item.ubicacion ?? '',
+      tipo: item.tipo ?? '',
+      capacidad: item.capacidad ?? '',
+      fecha_vencimiento: item.fecha_vencimiento ?? '',
+    })
+    setModalAbierto(true)
+  }
+
+  async function guardar(e: FormEvent) {
+    e.preventDefault()
+    setGuardando(true)
+    const payload = {
+      codigo: form.codigo,
+      empresa: form.empresa || null,
+      sede: form.sede || null,
+      ubicacion: form.ubicacion || null,
+      tipo: form.tipo || null,
+      capacidad: form.capacidad || null,
+      fecha_vencimiento: form.fecha_vencimiento || null,
+    }
+    const { error } = editando
+      ? await supabase.from('inventario_extintores').update(payload).eq('id', editando.id)
+      : await supabase.from('inventario_extintores').insert(payload)
+    setGuardando(false)
+    if (error) {
+      setMensaje({ tipo: 'error', titulo: 'No se pudo guardar', texto: error.message })
+      return
+    }
+    setModalAbierto(false)
+    cargar()
+  }
+
+  async function eliminar() {
+    if (!aEliminar) return
+    setEliminando(true)
+    const { error } = await supabase.from('inventario_extintores').delete().eq('id', aEliminar.id)
+    setEliminando(false)
+    setAEliminar(null)
+    if (error) {
+      setMensaje({ tipo: 'error', titulo: 'No se pudo eliminar', texto: error.message })
+      return
+    }
+    cargar()
+  }
 
   const sedes = useMemo(() => Array.from(new Set(items.map((i) => i.sede).filter((s): s is string => !!s))).sort(), [items])
 
@@ -98,19 +176,27 @@ export default function Vencimientos() {
       <PageHeader
         titulo="Vencimientos de extintores"
         acciones={
-          <Button variant="outline" size="sm" disabled={filtrados.length === 0} onClick={exportar}>
-            <FileSpreadsheet />
-            Exportar Excel
-          </Button>
+          <>
+            {esAdmin && (
+              <Button size="sm" onClick={abrirNuevo}>
+                <Plus />
+                Nuevo extintor
+              </Button>
+            )}
+            <Button variant="outline" size="sm" disabled={filtrados.length === 0} onClick={exportar}>
+              <FileSpreadsheet />
+              Exportar Excel
+            </Button>
+          </>
         }
       />
       <p className="mb-4 text-sm text-muted-foreground">
-        Seguimiento de la fecha de vencimiento de cada extintor del inventario, para anticipar el recambio antes de que quede vencido. El
-        inventario se administra en{' '}
+        Seguimiento de la fecha de vencimiento de cada extintor del inventario, para anticipar el recambio antes de que quede vencido.
+        {esAdmin ? ' Puedes crear, editar o eliminar registros directamente aquí, o desde ' : ' El inventario se administra en '}
         <Link to="/admin/inventario" className="font-medium text-[var(--cac-azul)] hover:underline">
           Administración → Inventario
         </Link>
-        .
+        {esAdmin ? ' (allí también se ven los datos de piso y agente extintor).' : '.'}
       </p>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -169,6 +255,7 @@ export default function Vencimientos() {
                 <th className="px-3 py-2.5 font-semibold">Tipo</th>
                 <th className="px-3 py-2.5 font-semibold">Vencimiento</th>
                 <th className="px-3 py-2.5 font-semibold">Estado</th>
+                {esAdmin && <th className="px-3 py-2.5 font-semibold"></th>}
               </tr>
             </thead>
             <tbody>
@@ -184,12 +271,24 @@ export default function Vencimientos() {
                     <td className="px-3 py-2">
                       <Badge tono={TONO_VENCIMIENTO[estado]}>{ETIQUETA_VENCIMIENTO[estado]}</Badge>
                     </td>
+                    {esAdmin && (
+                      <td className="px-3 py-2">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" title="Editar" onClick={() => abrirEditar(i)}>
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Eliminar" onClick={() => setAEliminar(i)}>
+                            <Trash2 className="size-3.5 text-[var(--error)]" />
+                          </Button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 )
               })}
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground">
+                  <td colSpan={esAdmin ? 7 : 6} className="px-3 py-6 text-center text-muted-foreground">
                     Sin registros con estos filtros.
                   </td>
                 </tr>
@@ -198,6 +297,66 @@ export default function Vencimientos() {
           </table>
         )}
       </Card>
+
+      <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
+        <DialogContent className="max-w-lg">
+          <form onSubmit={guardar}>
+            <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+              <Flame className="size-5 text-white" />
+              <DialogTitle className="text-white">{editando ? 'Editar extintor' : 'Nuevo extintor'}</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="venc-codigo">Código</Label>
+                <Input id="venc-codigo" required value={form.codigo} onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venc-empresa">Empresa</Label>
+                <Input id="venc-empresa" value={form.empresa} onChange={(e) => setForm((f) => ({ ...f, empresa: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venc-sede">Sede</Label>
+                <Input id="venc-sede" value={form.sede} onChange={(e) => setForm((f) => ({ ...f, sede: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venc-ubicacion">Ubicación</Label>
+                <Input id="venc-ubicacion" value={form.ubicacion} onChange={(e) => setForm((f) => ({ ...f, ubicacion: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venc-tipo">Tipo</Label>
+                <Input id="venc-tipo" value={form.tipo} onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="venc-capacidad">Capacidad</Label>
+                <Input id="venc-capacidad" value={form.capacidad} onChange={(e) => setForm((f) => ({ ...f, capacidad: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="venc-fecha">Fecha de vencimiento</Label>
+                <Input id="venc-fecha" type="date" value={form.fecha_vencimiento} onChange={(e) => setForm((f) => ({ ...f, fecha_vencimiento: e.target.value }))} />
+              </div>
+            </div>
+            <DialogFooter className="mt-5">
+              <Button type="button" variant="outline" onClick={() => setModalAbierto(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" cargando={guardando}>
+                Guardar
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={aEliminar !== null}
+        titulo={`Eliminar "${aEliminar?.codigo}"`}
+        descripcion="Esta acción no se puede deshacer. Las inspecciones históricas que ya usaron este código no se ven afectadas."
+        cargando={eliminando}
+        onConfirm={eliminar}
+        onCancel={() => setAEliminar(null)}
+      />
+
+      <MensajeDialog mensaje={mensaje} onClose={() => setMensaje(null)} />
     </div>
   )
 }

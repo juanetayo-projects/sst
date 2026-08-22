@@ -2,11 +2,17 @@ const VENTANA_PROXIMO_DIAS = 30
 
 export type EstadoVencimiento = 'vencido' | 'proximo' | 'vigente' | 'sin_fecha'
 
+/** Días (con signo) entre hoy y la fecha de vencimiento: negativo = ya venció, positivo = faltan esos días. */
+export function diasParaVencer(fecha: string | null | undefined): number | null {
+  if (!fecha) return null
+  const hoy = new Date().toISOString().slice(0, 10)
+  return Math.round((new Date(`${fecha}T00:00:00`).getTime() - new Date(`${hoy}T00:00:00`).getTime()) / 86400000)
+}
+
 /** Estado de vencimiento de un extintor (u otro elemento con fecha límite) a partir de su fecha de vencimiento. */
 export function estadoVencimiento(fecha: string | null | undefined): EstadoVencimiento {
-  if (!fecha) return 'sin_fecha'
-  const hoy = new Date().toISOString().slice(0, 10)
-  const dias = Math.round((new Date(`${fecha}T00:00:00`).getTime() - new Date(`${hoy}T00:00:00`).getTime()) / 86400000)
+  const dias = diasParaVencer(fecha)
+  if (dias === null) return 'sin_fecha'
   if (dias < 0) return 'vencido'
   if (dias <= VENTANA_PROXIMO_DIAS) return 'proximo'
   return 'vigente'

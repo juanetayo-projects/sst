@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ClipboardPlus, CalendarClock, FileClock, CheckCircle2, TriangleAlert, Eye, Flame } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts'
@@ -6,11 +6,13 @@ import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { formatearFecha } from '@/lib/utils'
 import { obtenerCategoriaSST, COLOR_HEX_BLOQUE } from '@/domain/categoriasSST'
-import { estadoVencimiento, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO } from '@/lib/inventario'
-import { MetricCard } from '@/components/ui'
+import { estadoVencimiento, diasParaVencer, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO } from '@/lib/inventario'
+import { MetricCard, FilterBar } from '@/components/ui'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { SkeletonTabla } from '@/components/ui/skeleton'
 
 type UltimaInspeccion = {
@@ -24,7 +26,9 @@ type UltimaInspeccion = {
 
 type Metricas = { hoy: number; borradores: number; completadas: number; urgentes: number }
 type ConteoPorTipo = { codigo: string; nombre: string; total: number }
-type ExtintorAlerta = { id: string; codigo: string; sede: string | null; ubicacion: string | null; fecha_vencimiento: string | null }
+type ExtintorAlerta = { id: string; codigo: string; empresa: string | null; sede: string | null; ubicacion: string | null; fecha_vencimiento: string | null }
+
+const TODOS = '__todos__'
 
 export default function DashboardPage() {
   const { perfil } = useAuth()
@@ -33,6 +37,8 @@ export default function DashboardPage() {
   const [ultimas, setUltimas] = useState<UltimaInspeccion[]>([])
   const [porTipo, setPorTipo] = useState<ConteoPorTipo[]>([])
   const [extintoresAlerta, setExtintoresAlerta] = useState<ExtintorAlerta[]>([])
+  const [empresaFiltro, setEmpresaFiltro] = useState(TODOS)
+  const [sedeFiltro, setSedeFiltro] = useState(TODOS)
 
   useEffect(() => {
     const hoyISO = new Date().toISOString().slice(0, 10)
@@ -53,11 +59,10 @@ export default function DashboardPage() {
       supabase.from('inspecciones').select('tipos_inspeccion(codigo)'),
       supabase
         .from('inventario_extintores')
-        .select('id,codigo,sede,ubicacion,fecha_vencimiento')
+        .select('id,codigo,empresa,sede,ubicacion,fecha_vencimiento')
         .eq('activo', true)
         .lte('fecha_vencimiento', en30dias.toISOString().slice(0, 10))
-        .order('fecha_vencimiento')
-        .limit(5),
+        .order('fecha_vencimiento'),
     ]).then(([hoy, borradores, completadas, urgentes, ultimasRes, tiposRes, todasRes, extintoresRes]) => {
       setMetricas({
         hoy: hoy.count ?? 0,
@@ -79,6 +84,30 @@ export default function DashboardPage() {
       setCargando(false)
     })
   }, [])
+
+  const empresasExtintores = useMemo(
+    () => Array.from(new Set(extintoresAlerta.map((e) => e.empresa).filter((v): v is string => !!v))).sort(),
+    [extintoresAlerta]
+  )
+  const sedesExtintores = useMemo(
+    () => Array.from(new Set(extintoresAlerta.map((e) => e.sede).filter((v): v is string => !!v))).sort(),
+    [extintoresAlerta]
+  )
+  const extintoresFiltrados = useMemo(
+    () =>
+      extintoresAlerta
+        .filter((e) => empresaFiltro === TODOS || e.empresa === empresaFiltro)
+        .filter((e) => sedeFiltro === TODOS || e.sede === sedeFiltro),
+    [extintoresAlerta, empresaFiltro, sedeFiltro]
+  )
+  const extintoresPorCodigo = useMemo(
+    () =>
+      extintoresFiltrados.map((e) => {
+        const dias = diasParaVencer(e.fecha_vencimiento) ?? 0
+        return { codigo: e.codigo, dias: Math.abs(dias), estado: estadoVencimiento(e.fecha_vencimiento) }
+      }),
+    [extintoresFiltrados]
+  )
 
   return (
     <div>
@@ -110,7 +139,7 @@ export default function DashboardPage() {
       {extintoresAlerta.length > 0 && (
         <Card className="mb-6">
           <CardContent className="p-4">
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--cac-azul)]">
                 <Flame className="size-4" />
                 Extintores vencidos o próximos a vencer
@@ -119,22 +148,100 @@ export default function DashboardPage() {
                 Ver todos
               </Link>
             </div>
-            <div className="space-y-1.5">
-              {extintoresAlerta.map((e) => {
-                const estado = estadoVencimiento(e.fecha_vencimiento)
-                return (
-                  <div key={e.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/60 px-2.5 py-1.5 text-sm">
-                    <div className="min-w-0">
-                      <span className="font-medium">{e.codigo}</span>
-                      <span className="text-muted-foreground"> — {e.sede ?? 'Sin sede'}{e.ubicacion ? ` · ${e.ubicacion}` : ''}</span>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{formatearFecha(e.fecha_vencimiento)}</span>
-                      <Badge tono={TONO_VENCIMIENTO[estado]}>{ETIQUETA_VENCIMIENTO[estado]}</Badge>
-                    </div>
-                  </div>
-                )
-              })}
+
+            <FilterBar className="mb-3 mt-0">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Empresa</Label>
+                <Select value={empresaFiltro} onValueChange={setEmpresaFiltro}>
+                  <SelectTrigger className="h-8 w-36 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TODOS}>Todas</SelectItem>
+                    {empresasExtintores.map((e) => (
+                      <SelectItem key={e} value={e}>
+                        {e}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Sede</Label>
+                <Select value={sedeFiltro} onValueChange={setSedeFiltro}>
+                  <SelectTrigger className="h-8 w-36 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TODOS}>Todas</SelectItem>
+                    {sedesExtintores.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </FilterBar>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+              <div className="max-h-80 overflow-y-auto rounded-lg border border-border/60">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0">
+                    <tr className="franja-institucional text-left text-xs text-white">
+                      <th className="px-3 py-2 font-semibold">Código</th>
+                      <th className="px-3 py-2 font-semibold">Empresa / Sede</th>
+                      <th className="px-3 py-2 font-semibold">Vencimiento</th>
+                      <th className="px-3 py-2 font-semibold">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {extintoresFiltrados.map((e, i) => {
+                      const estado = estadoVencimiento(e.fecha_vencimiento)
+                      return (
+                        <tr key={e.id} className="border-b border-border/60 last:border-0" style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}>
+                          <td className="px-3 py-1.5 font-medium">{e.codigo}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground">
+                            {e.empresa ?? 'Sin empresa'} {e.sede ? `· ${e.sede}` : ''}
+                          </td>
+                          <td className="px-3 py-1.5">{formatearFecha(e.fecha_vencimiento)}</td>
+                          <td className="px-3 py-1.5">
+                            <Badge tono={TONO_VENCIMIENTO[estado]}>{ETIQUETA_VENCIMIENTO[estado]}</Badge>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {extintoresFiltrados.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
+                          Sin extintores con estos filtros.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div>
+                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Días vencidos / por vencer, por código</div>
+                <ResponsiveContainer width="100%" height={Math.max(200, extintoresPorCodigo.length * 26)}>
+                  <BarChart data={extintoresPorCodigo} layout="vertical" margin={{ left: 0, right: 24, top: 4, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10.5 }} />
+                    <YAxis type="category" dataKey="codigo" width={70} tick={{ fontSize: 10.5 }} />
+                    <Tooltip
+                      contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }}
+                      formatter={(v: number, _n, item) => [`${v} día(s)`, ETIQUETA_VENCIMIENTO[(item.payload as { estado: keyof typeof ETIQUETA_VENCIMIENTO }).estado]]}
+                    />
+                    <Bar dataKey="dias" radius={[0, 4, 4, 0]}>
+                      {extintoresPorCodigo.map((e) => (
+                        <Cell key={e.codigo} fill={e.estado === 'vencido' ? 'var(--error)' : 'var(--advertencia)'} />
+                      ))}
+                      <LabelList dataKey="dias" position="right" style={{ fontSize: 10, fontWeight: 600, fill: 'var(--foreground)' }} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </CardContent>
         </Card>
