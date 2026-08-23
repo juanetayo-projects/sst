@@ -949,19 +949,13 @@ export default function ProgramacionRondas() {
           <div className="space-y-2">
             {diaSeleccionado?.items.map((p) => (
               <div key={p.id} className="rounded-lg border border-border p-2.5 text-sm">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span
-                      className="inline-block rounded-md px-2 py-0.5 text-sm font-semibold text-white"
-                      style={{ backgroundColor: colorCategoriaItem(p) }}
-                    >
-                      {p.tipos_inspeccion?.nombre ?? '—'}
-                    </span>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {p.empresa ?? 'Sin empresa'}
-                      {p.sede ? ` · ${p.sede}` : ''}
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className="inline-block rounded-md px-2 py-0.5 text-sm font-semibold text-white"
+                    style={{ backgroundColor: colorCategoriaItem(p) }}
+                  >
+                    {p.tipos_inspeccion?.nombre ?? '—'}
+                  </span>
                   <div className="flex shrink-0 items-center gap-1">
                     <EstadoBadge p={p} />
                     {esAdmin && p.estado === 'pendiente' && (
@@ -982,11 +976,16 @@ export default function ProgramacionRondas() {
                     )}
                   </div>
                 </div>
-                {p.responsable && (
-                  <div className="mt-1.5 w-full text-xs text-muted-foreground">
-                    <span className="font-semibold text-foreground">Responsable:</span> {p.responsable.nombre_completo}
-                  </div>
-                )}
+                <div className="mt-1.5 w-full text-xs text-muted-foreground">
+                  {p.empresa ?? 'Sin empresa'}
+                  {p.sede ? ` · ${p.sede}` : ''}
+                  {p.responsable && (
+                    <>
+                      {' · '}
+                      <span className="font-semibold text-foreground">Responsable:</span> {p.responsable.nombre_completo}
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
