@@ -16,7 +16,7 @@ import Usuarios from '@/pages/admin/Usuarios'
 import Catalogos from '@/pages/admin/Catalogos'
 import GestionEncuestas from '@/pages/admin/GestionEncuestas'
 import EditorEncuesta from '@/pages/admin/EditorEncuesta'
-import Inventario from '@/pages/admin/Inventario'
+import Inventario from '@/pages/Inventario'
 import ProgramacionRondas from '@/pages/ProgramacionRondas'
 import Vencimientos from '@/pages/Vencimientos'
 import SolicitudesCompra from '@/pages/SolicitudesCompra'
@@ -51,6 +51,7 @@ export default function App() {
             <Route path="infografia" element={<Infografia />} />
             <Route path="programacion" element={<ProgramacionRondas />} />
             <Route path="vencimientos" element={<Vencimientos />} />
+            <Route path="inventario" element={<Inventario />} />
             <Route path="solicitudes-compra" element={<SolicitudesCompra />} />
             <Route path="compromisos" element={<Compromisos />} />
             <Route path="inspecciones/nueva" element={<SeleccionarTipoInspeccion />} />
@@ -86,14 +87,6 @@ export default function App() {
               element={
                 <ProtectedRoute soloAdmin>
                   <EditorEncuesta />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="admin/inventario"
-              element={
-                <ProtectedRoute soloAdmin>
-                  <Inventario />
                 </ProtectedRoute>
               }
             />

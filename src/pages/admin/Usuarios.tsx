@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Plus, KeyRound, Trash2, ShieldCheck, UserPlus } from 'lucide-react'
+import { Plus, KeyRound, Trash2, ShieldCheck, UserPlus, LayoutGrid } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { PageHeader } from '@/components/ui'
@@ -16,6 +16,7 @@ import { MensajeDialog, type Mensaje } from '@/components/ui/mensaje-dialog'
 import { SkeletonTabla } from '@/components/ui/skeleton'
 import { PasswordStrengthMeter, CampoConfirmarPassword } from '@/components/ui/password-strength'
 import { CATEGORIAS_SST } from '@/domain/categoriasSST'
+import { MODULOS_APP } from '@/domain/modulosApp'
 
 type Perfil = {
   id: string
@@ -67,6 +68,11 @@ export default function Usuarios() {
   const [categoriasPermitidas, setCategoriasPermitidas] = useState<Set<string>>(new Set())
   const [cargandoPermisos, setCargandoPermisos] = useState(false)
   const [guardandoPermisos, setGuardandoPermisos] = useState(false)
+
+  const [modulosDe, setModulosDe] = useState<Perfil | null>(null)
+  const [modulosPermitidos, setModulosPermitidos] = useState<Set<string>>(new Set())
+  const [cargandoModulos, setCargandoModulos] = useState(false)
+  const [guardandoModulos, setGuardandoModulos] = useState(false)
 
   const [mensaje, setMensaje] = useState<Mensaje>(null)
 
@@ -199,6 +205,37 @@ export default function Usuarios() {
     setMensaje({ tipo: 'exito', titulo: 'Permisos actualizados', texto: `Se guardaron los permisos de ${permisosDe.nombre_completo}.` })
   }
 
+  function abrirModulos(u: Perfil) {
+    setModulosDe(u)
+    setCargandoModulos(true)
+    supabase
+      .from('permisos_modulo')
+      .select('modulo')
+      .eq('profile_id', u.id)
+      .then(({ data }) => {
+        setModulosPermitidos(new Set((data ?? []).map((r) => r.modulo)))
+        setCargandoModulos(false)
+      })
+  }
+
+  async function guardarModulos() {
+    if (!modulosDe) return
+    setGuardandoModulos(true)
+    await supabase.from('permisos_modulo').delete().eq('profile_id', modulosDe.id)
+    if (modulosPermitidos.size > 0) {
+      const filas = Array.from(modulosPermitidos).map((modulo) => ({ profile_id: modulosDe.id, modulo }))
+      const { error } = await supabase.from('permisos_modulo').insert(filas)
+      if (error) {
+        setGuardandoModulos(false)
+        setMensaje({ tipo: 'error', titulo: 'No se pudo guardar', texto: error.message })
+        return
+      }
+    }
+    setGuardandoModulos(false)
+    setModulosDe(null)
+    setMensaje({ tipo: 'exito', titulo: 'Accesos actualizados', texto: `Se guardaron los accesos de ${modulosDe.nombre_completo}.` })
+  }
+
   return (
     <div>
       <PageHeader
@@ -266,6 +303,9 @@ export default function Usuarios() {
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" title="Permisos por ronda" onClick={() => abrirPermisos(u)}>
                           <ShieldCheck className="size-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Accesos a módulos" onClick={() => abrirModulos(u)}>
+                          <LayoutGrid className="size-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => setReseteando(u)}>
                           <KeyRound className="size-3.5" />
@@ -477,6 +517,59 @@ export default function Usuarios() {
               Cancelar
             </Button>
             <Button type="button" cargando={guardandoPermisos} onClick={guardarPermisos}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={modulosDe !== null} onOpenChange={(v) => !v && setModulosDe(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+            <LayoutGrid className="size-5 text-white" />
+            <DialogTitle className="text-white">Accesos a módulos</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{modulosDe?.nombre_completo}</p>
+          {cargandoModulos ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">Cargando…</div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <label className="flex items-center gap-2 rounded-lg border border-border bg-accent/40 p-2.5 text-sm font-medium">
+                <Checkbox
+                  checked={modulosPermitidos.size === 0}
+                  onCheckedChange={(v) => setModulosPermitidos(v === true ? new Set() : new Set(MODULOS_APP.map((m) => m.id)))}
+                />
+                Todos los módulos
+              </label>
+              <p className="text-xs text-muted-foreground">
+                O elige puntualmente qué opciones del menú "Rondas" puede ver este usuario (Dashboard siempre es visible):
+              </p>
+              <div className="space-y-1.5">
+                {MODULOS_APP.map((m) => (
+                  <label key={m.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={modulosPermitidos.size > 0 && modulosPermitidos.has(m.id)}
+                      onCheckedChange={(v) =>
+                        setModulosPermitidos((prev) => {
+                          const copia = new Set(prev.size === 0 ? MODULOS_APP.map((mm) => mm.id) : prev)
+                          if (v === true) copia.add(m.id)
+                          else copia.delete(m.id)
+                          return copia
+                        })
+                      }
+                    />
+                    <m.icono className="size-3.5 text-muted-foreground" />
+                    {m.nombre}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          <DialogFooter className="mt-5">
+            <Button type="button" variant="outline" onClick={() => setModulosDe(null)}>
+              Cancelar
+            </Button>
+            <Button type="button" cargando={guardandoModulos} onClick={guardarModulos}>
               Guardar
             </Button>
           </DialogFooter>

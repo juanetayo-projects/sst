@@ -7,6 +7,7 @@ const VENTANA_PROXIMO_DIAS = 30
  */
 export const TIPOS_EQUIPO: Record<string, { etiqueta: string; etiquetaSingular: string }> = {
   extintor: { etiqueta: 'Extintores', etiquetaSingular: 'extintor' },
+  botiquin: { etiqueta: 'Botiquines', etiquetaSingular: 'botiquín' },
 }
 
 export type EstadoVencimiento = 'vencido' | 'proximo' | 'vigente' | 'sin_fecha'

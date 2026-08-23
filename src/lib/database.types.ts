@@ -256,6 +256,32 @@ export type Database = {
         }
         Relationships: []
       }
+      permisos_modulo: {
+        Row: {
+          created_at: string
+          modulo: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          modulo: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          modulo?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permisos_modulo_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permisos_ronda_categoria: {
         Row: {
           categoria_sst: string

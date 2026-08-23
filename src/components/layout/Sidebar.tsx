@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -14,29 +15,31 @@ import {
   Flame,
   ShoppingCart,
   ListChecks,
+  HeartPulse,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/inspecciones/nueva', label: 'Nueva Inspección', icon: ClipboardPlus, end: false },
-  { to: '/inspecciones', label: 'Historial', icon: History, end: true },
-  { to: '/programacion', label: 'Programación', icon: CalendarClock, end: false },
-  { to: '/vencimientos', label: 'Vencimientos', icon: Flame, end: true },
-  { to: '/solicitudes-compra', label: 'Solicitudes de Compra', icon: ShoppingCart, end: true },
-  { to: '/compromisos', label: 'Compromisos', icon: ListChecks, end: true },
-  { to: '/estadisticas', label: 'Estadísticas', icon: BarChart3, end: true },
-  { to: '/informe-ejecutivo', label: 'Informe Ejecutivo', icon: Gauge, end: true },
-  { to: '/infografia', label: 'Infografía', icon: Image, end: true },
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, modulo: null as string | null },
+  { to: '/inspecciones/nueva', label: 'Nueva Inspección', icon: ClipboardPlus, end: false, modulo: 'inspecciones' },
+  { to: '/inspecciones', label: 'Historial', icon: History, end: true, modulo: 'inspecciones' },
+  { to: '/programacion', label: 'Programación', icon: CalendarClock, end: false, modulo: 'programacion' },
+  { to: '/vencimientos', label: 'Vencimientos', icon: Flame, end: true, modulo: 'vencimientos' },
+  { to: '/inventario', label: 'Inventario', icon: Archive, end: true, modulo: 'inventario' },
+  { to: '/solicitudes-compra', label: 'Solicitudes de Compra', icon: ShoppingCart, end: true, modulo: 'solicitudes-compra' },
+  { to: '/compromisos', label: 'Compromisos', icon: ListChecks, end: true, modulo: 'compromisos' },
+  { to: '/estadisticas', label: 'Estadísticas', icon: BarChart3, end: true, modulo: 'estadisticas' },
+  { to: '/informe-ejecutivo', label: 'Informe Ejecutivo', icon: Gauge, end: true, modulo: 'informe-ejecutivo' },
+  { to: '/infografia', label: 'Infografía', icon: Image, end: true, modulo: 'infografia' },
 ]
 
 const NAV_ADMIN = [
   { to: '/admin/usuarios', label: 'Usuarios', icon: Users },
   { to: '/admin/catalogos', label: 'Catálogos', icon: Settings2 },
   { to: '/admin/encuestas', label: 'Encuestas', icon: ClipboardList },
-  { to: '/admin/inventario', label: 'Inventario', icon: Archive },
 ]
 
 function ItemNav({
@@ -73,9 +76,27 @@ function ItemNav({
 }
 
 export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () => void }) {
-  const { perfil } = useAuth()
+  const { session, perfil } = useAuth()
   const { pathname } = useLocation()
   const enAdmin = pathname.startsWith('/admin')
+
+  const [modulosPermitidos, setModulosPermitidos] = useState<Set<string> | null>(null)
+
+  useEffect(() => {
+    if (!session || perfil?.role === 'admin') return
+    supabase
+      .from('permisos_modulo')
+      .select('modulo')
+      .eq('profile_id', session.user.id)
+      .then(({ data }) => {
+        // Sin filas = sin restricción (ve todos los módulos).
+        if (data && data.length > 0) setModulosPermitidos(new Set(data.map((r) => r.modulo)))
+      })
+  }, [session, perfil])
+
+  const itemsVisibles = NAV_ITEMS.filter((item) => item.to !== '/informe-ejecutivo' || perfil?.role !== 'encuestador').filter(
+    (item) => !item.modulo || !modulosPermitidos || modulosPermitidos.has(item.modulo)
+  )
 
   return (
     <>
@@ -101,9 +122,32 @@ export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
         </div>
 
         <nav className="scroll-sutil-oscuro flex-1 space-y-1 overflow-y-auto p-3">
-          {NAV_ITEMS.filter((item) => item.to !== '/informe-ejecutivo' || perfil?.role !== 'encuestador').map((item) => (
-            <ItemNav key={item.to} {...item} onClick={onCerrar} />
-          ))}
+          <Accordion type="multiple" defaultValue={['rondas']}>
+            <AccordionItem value="rondas" className="border-none">
+              <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:no-underline">
+                Rondas
+              </AccordionTrigger>
+              <AccordionContent className="space-y-1 pb-0 pl-2">
+                {itemsVisibles.map((item) => (
+                  <ItemNav key={item.to} {...item} onClick={onCerrar} />
+                ))}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="arl" className="border-none">
+              <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:no-underline">
+                <span className="flex items-center gap-2.5">
+                  <HeartPulse className="size-4 shrink-0" />
+                  ARL
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pb-0 pl-2">
+                <p className="px-3 py-2 text-xs leading-relaxed text-white/50">
+                  Próximamente: radicar, aprobación, reportes y estadísticas de ARL.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           {perfil?.role === 'admin' && (
             <Accordion type="single" collapsible defaultValue={enAdmin ? 'admin' : undefined} className="pt-1">

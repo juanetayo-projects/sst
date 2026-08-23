@@ -35,7 +35,7 @@ const FORM_VACIO = { codigo: '', empresa: '', sede: '', ubicacion: '', tipo: '',
 
 export default function Vencimientos() {
   const { perfil } = useAuth()
-  const esAdmin = perfil?.role === 'admin'
+  const puedeEscribir = perfil?.role === 'admin' || perfil?.role === 'inspector'
 
   const [items, setItems] = useState<Extintor[]>([])
   const [cargando, setCargando] = useState(true)
@@ -209,7 +209,7 @@ export default function Vencimientos() {
         titulo="Vencimientos de extintores"
         acciones={
           <>
-            {esAdmin && (
+            {puedeEscribir && (
               <Button size="sm" onClick={abrirNuevo}>
                 <Plus />
                 Nuevo extintor
@@ -224,11 +224,11 @@ export default function Vencimientos() {
       />
       <p className="mb-4 text-sm text-muted-foreground">
         Seguimiento de la fecha de vencimiento de cada extintor del inventario, para anticipar el recambio antes de que quede vencido.
-        {esAdmin ? ' Puedes crear, editar o eliminar registros directamente aquí, o desde ' : ' El inventario se administra en '}
-        <Link to="/admin/inventario" className="font-medium text-[var(--cac-azul)] hover:underline">
-          Administración → Inventario
+        {puedeEscribir ? ' Puedes crear, editar o eliminar registros directamente aquí, o desde ' : ' El inventario se administra en '}
+        <Link to="/inventario" className="font-medium text-[var(--cac-azul)] hover:underline">
+          Inventario
         </Link>
-        {esAdmin ? ' (allí también se ven los datos de piso y agente extintor).' : '.'}
+        {puedeEscribir ? ' (allí también se ven los datos de piso y agente extintor, y el inventario de botiquines).' : '.'}
       </p>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -351,7 +351,7 @@ export default function Vencimientos() {
                 <th className="px-3 py-1.5 font-semibold">Tipo</th>
                 <th className="px-3 py-1.5 font-semibold">Vencimiento</th>
                 <th className="px-3 py-1.5 font-semibold">Estado</th>
-                {esAdmin && <th className="px-3 py-1.5 font-semibold"></th>}
+                {puedeEscribir && <th className="px-3 py-1.5 font-semibold"></th>}
               </tr>
             </thead>
             <tbody>
@@ -367,7 +367,7 @@ export default function Vencimientos() {
                     <td className="px-3 py-1.5">
                       <Badge tono={TONO_VENCIMIENTO[estado]}>{ETIQUETA_VENCIMIENTO[estado]}</Badge>
                     </td>
-                    {esAdmin && (
+                    {puedeEscribir && (
                       <td className="px-3 py-1.5">
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="icon" title="Editar" onClick={() => abrirEditar(i)}>
@@ -384,7 +384,7 @@ export default function Vencimientos() {
               })}
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={esAdmin ? 7 : 6} className="px-3 py-6 text-center text-muted-foreground">
+                  <td colSpan={puedeEscribir ? 7 : 6} className="px-3 py-6 text-center text-muted-foreground">
                     Sin registros con estos filtros.
                   </td>
                 </tr>
