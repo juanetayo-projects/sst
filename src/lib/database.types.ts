@@ -199,10 +199,11 @@ export type Database = {
           },
         ]
       }
-      inventario_extintores: {
+      inventario_equipos: {
         Row: {
           activo: boolean
           agente_extintor: string | null
+          atributos: Json
           capacidad: string | null
           codigo: string
           created_at: string
@@ -213,12 +214,14 @@ export type Database = {
           prueba_hidrostatica: string | null
           sede: string | null
           tipo: string | null
+          tipo_equipo: string
           ubicacion: string | null
           updated_at: string
         }
         Insert: {
           activo?: boolean
           agente_extintor?: string | null
+          atributos?: Json
           capacidad?: string | null
           codigo: string
           created_at?: string
@@ -229,12 +232,14 @@ export type Database = {
           prueba_hidrostatica?: string | null
           sede?: string | null
           tipo?: string | null
+          tipo_equipo?: string
           ubicacion?: string | null
           updated_at?: string
         }
         Update: {
           activo?: boolean
           agente_extintor?: string | null
+          atributos?: Json
           capacidad?: string | null
           codigo?: string
           created_at?: string
@@ -245,6 +250,7 @@ export type Database = {
           prueba_hidrostatica?: string | null
           sede?: string | null
           tipo?: string | null
+          tipo_equipo?: string
           ubicacion?: string | null
           updated_at?: string
         }

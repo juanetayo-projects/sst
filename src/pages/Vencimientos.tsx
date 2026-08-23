@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { formatearFecha } from '@/lib/utils'
 import { exportarExcel } from '@/lib/exportar'
-import { estadoVencimiento, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO, type EstadoVencimiento } from '@/lib/inventario'
+import { estadoVencimiento, diasParaVencer, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO, type EstadoVencimiento } from '@/lib/inventario'
 import { PageHeader, FilterBar, MetricCard } from '@/components/ui'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -53,8 +53,9 @@ export default function Vencimientos() {
   function cargar() {
     setCargando(true)
     supabase
-      .from('inventario_extintores')
+      .from('inventario_equipos')
       .select('id,codigo,empresa,sede,ubicacion,tipo,capacidad,fecha_vencimiento')
+      .eq('tipo_equipo', 'extintor')
       .eq('activo', true)
       .then(({ data }) => {
         setItems((data ?? []) as Extintor[])
@@ -88,6 +89,7 @@ export default function Vencimientos() {
     e.preventDefault()
     setGuardando(true)
     const payload = {
+      tipo_equipo: 'extintor',
       codigo: form.codigo,
       empresa: form.empresa || null,
       sede: form.sede || null,
@@ -97,8 +99,8 @@ export default function Vencimientos() {
       fecha_vencimiento: form.fecha_vencimiento || null,
     }
     const { error } = editando
-      ? await supabase.from('inventario_extintores').update(payload).eq('id', editando.id)
-      : await supabase.from('inventario_extintores').insert(payload)
+      ? await supabase.from('inventario_equipos').update(payload).eq('id', editando.id)
+      : await supabase.from('inventario_equipos').insert(payload)
     setGuardando(false)
     if (error) {
       setMensaje({ tipo: 'error', titulo: 'No se pudo guardar', texto: error.message })
@@ -111,7 +113,7 @@ export default function Vencimientos() {
   async function eliminar() {
     if (!aEliminar) return
     setEliminando(true)
-    const { error } = await supabase.from('inventario_extintores').delete().eq('id', aEliminar.id)
+    const { error } = await supabase.from('inventario_equipos').delete().eq('id', aEliminar.id)
     setEliminando(false)
     setAEliminar(null)
     if (error) {
@@ -141,6 +143,36 @@ export default function Vencimientos() {
     const vigentes = filtrados.filter((i) => estadoVencimiento(i.fecha_vencimiento) === 'vigente').length
     return { total: filtrados.length, vencidos, proximos, vigentes }
   }, [filtrados])
+
+  // Panorama completo por sede (ignora los filtros de la tabla, para que las tarjetas siempre muestren el total real).
+  const porSede = useMemo(() => {
+    const mapa = new Map<string, { vencidos: number; proximos: number; vigentes: number; total: number }>()
+    for (const i of items) {
+      const s = i.sede ?? 'Sin sede'
+      const actual = mapa.get(s) ?? { vencidos: 0, proximos: 0, vigentes: 0, total: 0 }
+      const estado = estadoVencimiento(i.fecha_vencimiento)
+      if (estado === 'vencido') actual.vencidos++
+      else if (estado === 'proximo') actual.proximos++
+      else if (estado === 'vigente') actual.vigentes++
+      actual.total++
+      mapa.set(s, actual)
+    }
+    return Array.from(mapa.entries())
+      .map(([s, c]) => ({ sede: s, ...c }))
+      .sort((a, b) => b.total - a.total)
+  }, [items])
+
+  // Línea de próximos vencimientos: los más urgentes primero, respeta el filtro de sede pero no el de estado.
+  const proximosVencimientos = useMemo(() => {
+    return items
+      .filter((i) => sede === TODOS || i.sede === sede)
+      .filter((i) => {
+        const e = estadoVencimiento(i.fecha_vencimiento)
+        return e === 'vencido' || e === 'proximo'
+      })
+      .sort((a, b) => (a.fecha_vencimiento ?? '9999').localeCompare(b.fecha_vencimiento ?? '9999'))
+      .slice(0, 15)
+  }, [items, sede])
 
   const subtituloFiltros = useMemo(() => {
     const partes = [`Sede: ${sede === TODOS ? 'Todas' : sede}`, `Estado: ${estadoFiltro === TODOS ? 'Todos' : ETIQUETA_VENCIMIENTO[estadoFiltro as EstadoVencimiento]}`]
@@ -205,6 +237,70 @@ export default function Vencimientos() {
         <MetricCard titulo="Próximos a vencer" valor={resumen.proximos} icono={Flame} color="ambar" />
         <MetricCard titulo="Vigentes" valor={resumen.vigentes} icono={Flame} color="verde" />
       </div>
+
+      {porSede.length > 0 && (
+        <div className="mb-4">
+          <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Por sede</div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {porSede.map((s) => {
+              const activa = sede === s.sede
+              const pctVigente = s.total > 0 ? Math.round((s.vigentes / s.total) * 100) : 0
+              return (
+                <button
+                  key={s.sede}
+                  onClick={() => setSede(activa ? TODOS : s.sede)}
+                  className={`rounded-xl border p-3 text-left shadow-relieve-sm transition-all hover:-translate-y-0.5 hover:shadow-relieve ${
+                    activa ? 'border-[var(--cac-azul)] bg-[var(--superficie-azul-1)]' : 'border-border bg-card'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-semibold">{s.sede}</span>
+                    <span className="shrink-0 text-xs font-semibold text-muted-foreground">{s.total} extintores</span>
+                  </div>
+                  <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[var(--neutro-suave)]">
+                    {s.vencidos > 0 && <div style={{ width: `${(s.vencidos / s.total) * 100}%`, backgroundColor: 'var(--error)' }} />}
+                    {s.proximos > 0 && <div style={{ width: `${(s.proximos / s.total) * 100}%`, backgroundColor: 'var(--advertencia)' }} />}
+                    {s.vigentes > 0 && <div style={{ width: `${(s.vigentes / s.total) * 100}%`, backgroundColor: 'var(--exito)' }} />}
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>{pctVigente}% vigentes</span>
+                    {(s.vencidos > 0 || s.proximos > 0) && (
+                      <span>
+                        {s.vencidos > 0 && `${s.vencidos} vencido${s.vencidos > 1 ? 's' : ''}`}
+                        {s.vencidos > 0 && s.proximos > 0 && ' · '}
+                        {s.proximos > 0 && `${s.proximos} próximo${s.proximos > 1 ? 's' : ''}`}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {proximosVencimientos.length > 0 && (
+        <div className="mb-4">
+          <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Próximos vencimientos</div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {proximosVencimientos.map((i) => {
+              const estado = estadoVencimiento(i.fecha_vencimiento)
+              const dias = diasParaVencer(i.fecha_vencimiento) ?? 0
+              return (
+                <div
+                  key={i.id}
+                  className="flex w-44 shrink-0 flex-col gap-1 rounded-lg border-l-4 bg-card p-2.5 text-xs shadow-relieve-sm"
+                  style={{ borderLeftColor: estado === 'vencido' ? 'var(--error)' : 'var(--advertencia)' }}
+                >
+                  <span className="font-semibold">{i.codigo}</span>
+                  <span className="truncate text-muted-foreground">{i.ubicacion ?? i.sede ?? '—'}</span>
+                  <Badge tono={TONO_VENCIMIENTO[estado]}>{dias < 0 ? `Vencido hace ${Math.abs(dias)}d` : `Vence en ${dias}d`}</Badge>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <FilterBar>
         <div className="space-y-1.5">

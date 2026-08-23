@@ -1,5 +1,14 @@
 const VENTANA_PROXIMO_DIAS = 30
 
+/**
+ * Tipos de equipo que puede llevar `inventario_equipos` (columna `tipo_equipo`).
+ * Hoy solo hay datos de extintores; al sembrar el primer botiquín/camilla se agrega aquí su entrada
+ * y las páginas que iteran este registro (en vez de asumir "extintor" a mano) muestran el tipo nuevo solas.
+ */
+export const TIPOS_EQUIPO: Record<string, { etiqueta: string; etiquetaSingular: string }> = {
+  extintor: { etiqueta: 'Extintores', etiquetaSingular: 'extintor' },
+}
+
 export type EstadoVencimiento = 'vencido' | 'proximo' | 'vigente' | 'sin_fecha'
 
 /** Días (con signo) entre hoy y la fecha de vencimiento: negativo = ya venció, positivo = faltan esos días. */

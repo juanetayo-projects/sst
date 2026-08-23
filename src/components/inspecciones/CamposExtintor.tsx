@@ -40,8 +40,9 @@ export function CamposExtintor({
 
   useEffect(() => {
     supabase
-      .from('inventario_extintores')
+      .from('inventario_equipos')
       .select('codigo,sede,ubicacion,tipo,capacidad')
+      .eq('tipo_equipo', 'extintor')
       .eq('activo', true)
       .order('codigo')
       .then(({ data }) => setInventario((data ?? []) as ExtintorInventario[]))

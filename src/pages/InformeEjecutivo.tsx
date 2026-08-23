@@ -259,8 +259,9 @@ export default function InformeEjecutivo() {
       supabase.from('empresas').select('nombre').eq('activo', true).order('orden'),
       supabase.from('sedes').select('nombre').eq('activo', true).order('orden'),
       supabase
-        .from('inventario_extintores')
+        .from('inventario_equipos')
         .select('id', { count: 'exact', head: true })
+        .eq('tipo_equipo', 'extintor')
         .eq('activo', true)
         .lte('fecha_vencimiento', en30dias.toISOString().slice(0, 10)),
       supabase.from('compromisos_ronda').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente').lt('fecha_compromiso', hoyISO),

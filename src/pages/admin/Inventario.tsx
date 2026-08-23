@@ -67,8 +67,9 @@ export default function Inventario() {
   function cargar() {
     setCargando(true)
     supabase
-      .from('inventario_extintores')
+      .from('inventario_equipos')
       .select('*')
+      .eq('tipo_equipo', 'extintor')
       .order('codigo')
       .then(({ data }) => {
         setItems((data ?? []) as Extintor[])
@@ -104,6 +105,7 @@ export default function Inventario() {
     e.preventDefault()
     setGuardando(true)
     const payload = {
+      tipo_equipo: 'extintor',
       codigo: form.codigo,
       empresa: form.empresa || null,
       sede: form.sede || null,
@@ -115,8 +117,8 @@ export default function Inventario() {
       fecha_vencimiento: form.fecha_vencimiento || null,
     }
     const { error } = editando
-      ? await supabase.from('inventario_extintores').update(payload).eq('id', editando.id)
-      : await supabase.from('inventario_extintores').insert(payload)
+      ? await supabase.from('inventario_equipos').update(payload).eq('id', editando.id)
+      : await supabase.from('inventario_equipos').insert(payload)
     setGuardando(false)
     if (error) {
       setMensaje({ tipo: 'error', titulo: 'No se pudo guardar', texto: error.message })
@@ -127,14 +129,14 @@ export default function Inventario() {
   }
 
   async function alternarActivo(item: Extintor) {
-    await supabase.from('inventario_extintores').update({ activo: !item.activo }).eq('id', item.id)
+    await supabase.from('inventario_equipos').update({ activo: !item.activo }).eq('id', item.id)
     cargar()
   }
 
   async function eliminar() {
     if (!aEliminar) return
     setEliminando(true)
-    const { error } = await supabase.from('inventario_extintores').delete().eq('id', aEliminar.id)
+    const { error } = await supabase.from('inventario_equipos').delete().eq('id', aEliminar.id)
     setEliminando(false)
     setAEliminar(null)
     if (error) {

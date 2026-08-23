@@ -58,8 +58,9 @@ export default function DashboardPage() {
       supabase.from('tipos_inspeccion').select('codigo,nombre').eq('activo', true).order('orden'),
       supabase.from('inspecciones').select('tipos_inspeccion(codigo)'),
       supabase
-        .from('inventario_extintores')
+        .from('inventario_equipos')
         .select('id,codigo,empresa,sede,ubicacion,fecha_vencimiento')
+        .eq('tipo_equipo', 'extintor')
         .eq('activo', true)
         .lte('fecha_vencimiento', en30dias.toISOString().slice(0, 10))
         .order('fecha_vencimiento'),
