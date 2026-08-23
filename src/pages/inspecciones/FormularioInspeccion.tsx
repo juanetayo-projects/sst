@@ -24,6 +24,7 @@ import {
 import { MensajeDialog, type Mensaje } from "@/components/ui/mensaje-dialog";
 import { CampoDinamico } from "@/components/inspecciones/CampoDinamico";
 import { CamposExtintor } from "@/components/inspecciones/CamposExtintor";
+import { CamposBotiquin } from "@/components/inspecciones/CamposBotiquin";
 import { BloqueCategoria } from "@/components/inspecciones/BloqueCategoria";
 import { NavSecciones, type Seccion } from "@/components/inspecciones/NavSecciones";
 import { PanelInfograficoSST } from "@/components/inspecciones/PanelInfograficoSST";
@@ -518,6 +519,19 @@ export default function FormularioInspeccion() {
                   preguntaCodigo={estructura.encabezado.find((p) => p.texto === "Código del Extintor")!}
                   preguntaTipo={estructura.encabezado.find((p) => p.texto === "Tipo de Extintor")!}
                   preguntaCapacidad={estructura.encabezado.find((p) => p.texto === "Capacidad del extintor")!}
+                  sede={sede}
+                  respuestas={respuestas}
+                  onChange={cambiarRespuesta}
+                  faltantes={faltantes}
+                />
+              ) : estructura.tipo.codigo === "botiquines" &&
+                estructura.encabezado.find((p) => p.texto === "Código del botiquín") &&
+                estructura.encabezado.find((p) => p.texto === "Tipo de botiquín") &&
+                estructura.encabezado.find((p) => p.texto === "Ubicación del botiquín") ? (
+                <CamposBotiquin
+                  preguntaCodigo={estructura.encabezado.find((p) => p.texto === "Código del botiquín")!}
+                  preguntaTipo={estructura.encabezado.find((p) => p.texto === "Tipo de botiquín")!}
+                  preguntaUbicacion={estructura.encabezado.find((p) => p.texto === "Ubicación del botiquín")!}
                   sede={sede}
                   respuestas={respuestas}
                   onChange={cambiarRespuesta}

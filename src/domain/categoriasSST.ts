@@ -49,7 +49,7 @@ export type CategoriaSST = {
 };
 
 /**
- * Agrupación de los 10 tipos de inspección en las 7 categorías de ronda SST
+ * Agrupación de los 11 tipos de inspección en las 7 categorías de ronda SST
  * definidas en la infografía "Clasificación de Rondas de Inspección SST"
  * compartida por la clínica, alineada con la Resolución 0312 de 2019
  * (Estándares Mínimos del SG-SST en Colombia).
@@ -64,7 +64,7 @@ export const CATEGORIAS_SST: CategoriaSST[] = [
     frecuencia: "Mensual (o según plan de emergencias)",
     color: "rojo",
     icono: Siren,
-    tipos: ["emergencias"],
+    tipos: ["emergencias", "botiquines"],
     imagen: "emergencias.webp",
     iconoImg: "emergencias.webp",
     imagenEncabezado: "emergencias.webp",
