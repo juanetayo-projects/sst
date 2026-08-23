@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardPlus, CalendarClock, FileClock, CheckCircle2, TriangleAlert, Eye, Flame } from 'lucide-react'
+import { ClipboardPlus, CalendarClock, FileClock, CheckCircle2, TriangleAlert, Eye, Flame, Syringe, type LucideIcon } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -25,7 +25,7 @@ type UltimaInspeccion = {
 
 type Metricas = { hoy: number; borradores: number; completadas: number; urgentes: number }
 type ConteoPorTipo = { codigo: string; nombre: string; total: number }
-type ExtintorAlerta = { id: string; codigo: string; empresa: string | null; sede: string | null; ubicacion: string | null; fecha_vencimiento: string | null }
+type EquipoAlerta = { id: string; codigo: string; empresa: string | null; sede: string | null; ubicacion: string | null; fecha_vencimiento: string | null }
 
 const TODOS = '__todos__'
 
@@ -35,10 +35,8 @@ export default function DashboardPage() {
   const [metricas, setMetricas] = useState<Metricas>({ hoy: 0, borradores: 0, completadas: 0, urgentes: 0 })
   const [ultimas, setUltimas] = useState<UltimaInspeccion[]>([])
   const [porTipo, setPorTipo] = useState<ConteoPorTipo[]>([])
-  const [extintoresAlerta, setExtintoresAlerta] = useState<ExtintorAlerta[]>([])
-  const [empresaFiltro, setEmpresaFiltro] = useState(TODOS)
-  const [sedeFiltro, setSedeFiltro] = useState(TODOS)
-  const [estadoFiltro, setEstadoFiltro] = useState('proximo')
+  const [extintoresAlerta, setExtintoresAlerta] = useState<EquipoAlerta[]>([])
+  const [botiquinesAlerta, setBotiquinesAlerta] = useState<EquipoAlerta[]>([])
 
   useEffect(() => {
     const hoyISO = new Date().toISOString().slice(0, 10)
@@ -64,7 +62,14 @@ export default function DashboardPage() {
         .eq('activo', true)
         .lte('fecha_vencimiento', en30dias.toISOString().slice(0, 10))
         .order('fecha_vencimiento'),
-    ]).then(([hoy, borradores, completadas, urgentes, ultimasRes, tiposRes, todasRes, extintoresRes]) => {
+      supabase
+        .from('inventario_equipos')
+        .select('id,codigo,empresa,sede,ubicacion,fecha_vencimiento')
+        .eq('tipo_equipo', 'botiquin')
+        .eq('activo', true)
+        .lte('fecha_vencimiento', en30dias.toISOString().slice(0, 10))
+        .order('fecha_vencimiento'),
+    ]).then(([hoy, borradores, completadas, urgentes, ultimasRes, tiposRes, todasRes, extintoresRes, botiquinesRes]) => {
       setMetricas({
         hoy: hoy.count ?? 0,
         borradores: borradores.count ?? 0,
@@ -72,7 +77,8 @@ export default function DashboardPage() {
         urgentes: urgentes.count ?? 0,
       })
       setUltimas((ultimasRes.data ?? []) as unknown as UltimaInspeccion[])
-      setExtintoresAlerta((extintoresRes.data ?? []) as ExtintorAlerta[])
+      setExtintoresAlerta((extintoresRes.data ?? []) as EquipoAlerta[])
+      setBotiquinesAlerta((botiquinesRes.data ?? []) as EquipoAlerta[])
 
       const conteo = new Map<string, number>()
       for (const t of tiposRes.data ?? []) conteo.set(t.codigo, 0)
@@ -85,31 +91,6 @@ export default function DashboardPage() {
       setCargando(false)
     })
   }, [])
-
-  const empresasExtintores = useMemo(
-    () => Array.from(new Set(extintoresAlerta.map((e) => e.empresa).filter((v): v is string => !!v))).sort(),
-    [extintoresAlerta]
-  )
-  const sedesExtintores = useMemo(
-    () => Array.from(new Set(extintoresAlerta.map((e) => e.sede).filter((v): v is string => !!v))).sort(),
-    [extintoresAlerta]
-  )
-  const extintoresFiltrados = useMemo(
-    () =>
-      extintoresAlerta
-        .filter((e) => empresaFiltro === TODOS || e.empresa === empresaFiltro)
-        .filter((e) => sedeFiltro === TODOS || e.sede === sedeFiltro)
-        .filter((e) => estadoFiltro === TODOS || estadoVencimiento(e.fecha_vencimiento) === estadoFiltro),
-    [extintoresAlerta, empresaFiltro, sedeFiltro, estadoFiltro]
-  )
-  const extintoresPorCodigo = useMemo(
-    () =>
-      extintoresFiltrados.map((e) => {
-        const dias = diasParaVencer(e.fecha_vencimiento) ?? 0
-        return { codigo: e.codigo, dias: Math.abs(dias), estado: estadoVencimiento(e.fecha_vencimiento) }
-      }),
-    [extintoresFiltrados]
-  )
 
   return (
     <div>
@@ -137,119 +118,23 @@ export default function DashboardPage() {
         <MetricCard compacto titulo="Urgentes" valor={metricas.urgentes} icono={TriangleAlert} color="rojo" />
       </div>
 
-      {extintoresAlerta.length > 0 && (
-        <Card className="mb-4">
-          <CardContent className="p-3">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--cac-azul)]">
-                <Flame className="size-4" />
-                Extintores vencidos o próximos a vencer
-              </div>
-              <Link to="/vencimientos" className="text-xs font-medium text-[var(--cac-azul)] hover:underline">
-                Ver todos
-              </Link>
-            </div>
-
-            <div className="mb-2.5 flex flex-wrap items-center gap-2">
-              <Select value={empresaFiltro} onValueChange={setEmpresaFiltro}>
-                <SelectTrigger className="h-7 w-32 text-xs">
-                  <SelectValue placeholder="Empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TODOS}>Todas las empresas</SelectItem>
-                  {empresasExtintores.map((e) => (
-                    <SelectItem key={e} value={e}>
-                      {e}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sedeFiltro} onValueChange={setSedeFiltro}>
-                <SelectTrigger className="h-7 w-32 text-xs">
-                  <SelectValue placeholder="Sede" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TODOS}>Todas las sedes</SelectItem>
-                  {sedesExtintores.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-                <SelectTrigger className="h-7 w-32 text-xs">
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TODOS}>Vencidos y próximos</SelectItem>
-                  <SelectItem value="vencido">Vencidos</SelectItem>
-                  <SelectItem value="proximo">Próximos a vencer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_300px]">
-              <div className="max-h-56 overflow-y-auto rounded-lg border border-border/60">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0">
-                    <tr className="franja-institucional text-left text-white">
-                      <th className="px-2.5 py-1.5 font-semibold">Código</th>
-                      <th className="px-2.5 py-1.5 font-semibold">Empresa / Sede</th>
-                      <th className="px-2.5 py-1.5 font-semibold">Vencimiento</th>
-                      <th className="px-2.5 py-1.5 font-semibold">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {extintoresFiltrados.map((e, i) => {
-                      const estado = estadoVencimiento(e.fecha_vencimiento)
-                      return (
-                        <tr key={e.id} className="border-b border-border/60 last:border-0" style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}>
-                          <td className="px-2.5 py-1 font-medium">{e.codigo}</td>
-                          <td className="px-2.5 py-1 text-muted-foreground">
-                            {e.empresa ?? 'Sin empresa'} {e.sede ? `· ${e.sede}` : ''}
-                          </td>
-                          <td className="px-2.5 py-1">{formatearFecha(e.fecha_vencimiento)}</td>
-                          <td className="px-2.5 py-1">
-                            <Badge tono={TONO_VENCIMIENTO[estado]}>{ETIQUETA_VENCIMIENTO[estado]}</Badge>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                    {extintoresFiltrados.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
-                          Sin extintores con estos filtros.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <div>
-                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Días vencidos / por vencer, por código</div>
-                <ResponsiveContainer width="100%" height={Math.max(160, extintoresPorCodigo.length * 22)}>
-                  <BarChart data={extintoresPorCodigo} layout="vertical" margin={{ left: 0, right: 24, top: 4, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
-                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10.5 }} />
-                    <YAxis type="category" dataKey="codigo" width={70} tick={{ fontSize: 10.5 }} />
-                    <Tooltip
-                      contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }}
-                      formatter={(v: number, _n, item) => [`${v} día(s)`, ETIQUETA_VENCIMIENTO[(item.payload as { estado: keyof typeof ETIQUETA_VENCIMIENTO }).estado]]}
-                    />
-                    <Bar dataKey="dias" radius={[0, 4, 4, 0]}>
-                      {extintoresPorCodigo.map((e) => (
-                        <Cell key={e.codigo} fill={e.estado === 'vencido' ? 'var(--error)' : 'var(--advertencia)'} />
-                      ))}
-                      <LabelList dataKey="dias" position="right" style={{ fontSize: 10, fontWeight: 600, fill: 'var(--foreground)' }} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {(extintoresAlerta.length > 0 || botiquinesAlerta.length > 0) && (
+        <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <WidgetVencimientosEquipo
+            titulo="Extintores"
+            icono={Flame}
+            linkVerTodos="/vencimientos"
+            singular="extintor"
+            items={extintoresAlerta}
+          />
+          <WidgetVencimientosEquipo
+            titulo="Botiquines"
+            icono={Syringe}
+            linkVerTodos="/inventario"
+            singular="botiquín"
+            items={botiquinesAlerta}
+          />
+        </div>
       )}
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -325,5 +210,160 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Tarjeta compacta de vencimientos por tipo de equipo (extintores/botiquines) — dos caben lado a lado. */
+function WidgetVencimientosEquipo({
+  titulo,
+  icono: Icono,
+  linkVerTodos,
+  singular,
+  items,
+}: {
+  titulo: string
+  icono: LucideIcon
+  linkVerTodos: string
+  singular: string
+  items: EquipoAlerta[]
+}) {
+  const [empresaFiltro, setEmpresaFiltro] = useState(TODOS)
+  const [sedeFiltro, setSedeFiltro] = useState(TODOS)
+  const [estadoFiltro, setEstadoFiltro] = useState('proximo')
+
+  const empresas = useMemo(() => Array.from(new Set(items.map((e) => e.empresa).filter((v): v is string => !!v))).sort(), [items])
+  const sedes = useMemo(() => Array.from(new Set(items.map((e) => e.sede).filter((v): v is string => !!v))).sort(), [items])
+  const filtrados = useMemo(
+    () =>
+      items
+        .filter((e) => empresaFiltro === TODOS || e.empresa === empresaFiltro)
+        .filter((e) => sedeFiltro === TODOS || e.sede === sedeFiltro)
+        .filter((e) => estadoFiltro === TODOS || estadoVencimiento(e.fecha_vencimiento) === estadoFiltro),
+    [items, empresaFiltro, sedeFiltro, estadoFiltro]
+  )
+  const porCodigo = useMemo(
+    () =>
+      filtrados.map((e) => {
+        const dias = diasParaVencer(e.fecha_vencimiento) ?? 0
+        return { codigo: e.codigo, dias: Math.abs(dias), estado: estadoVencimiento(e.fecha_vencimiento) }
+      }),
+    [filtrados]
+  )
+
+  if (items.length === 0) return null
+
+  return (
+    <Card>
+      <CardContent className="p-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--cac-azul)]">
+            <Icono className="size-4" />
+            {titulo} vencidos o próximos a vencer
+          </div>
+          <Link to={linkVerTodos} className="text-xs font-medium text-[var(--cac-azul)] hover:underline">
+            Ver todos
+          </Link>
+        </div>
+
+        <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+          <Select value={empresaFiltro} onValueChange={setEmpresaFiltro}>
+            <SelectTrigger className="h-7 w-24 text-xs">
+              <SelectValue placeholder="Empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODOS}>Todas las empresas</SelectItem>
+              {empresas.map((e) => (
+                <SelectItem key={e} value={e}>
+                  {e}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sedeFiltro} onValueChange={setSedeFiltro}>
+            <SelectTrigger className="h-7 w-24 text-xs">
+              <SelectValue placeholder="Sede" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODOS}>Todas las sedes</SelectItem>
+              {sedes.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+            <SelectTrigger className="h-7 w-28 text-xs">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODOS}>Vencidos y próximos</SelectItem>
+              <SelectItem value="vencido">Vencidos</SelectItem>
+              <SelectItem value="proximo">Próximos a vencer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[1fr_140px]">
+          <div className="max-h-44 overflow-y-auto rounded-lg border border-border/60">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0">
+                <tr className="franja-institucional text-left text-white">
+                  <th className="px-2 py-1.5 font-semibold">Código</th>
+                  <th className="px-2 py-1.5 font-semibold">Empresa / Sede</th>
+                  <th className="px-2 py-1.5 font-semibold">Vence</th>
+                  <th className="px-2 py-1.5 font-semibold">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtrados.map((e, i) => {
+                  const estado = estadoVencimiento(e.fecha_vencimiento)
+                  return (
+                    <tr key={e.id} className="border-b border-border/60 last:border-0" style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}>
+                      <td className="px-2 py-1 font-medium">{e.codigo}</td>
+                      <td className="px-2 py-1 text-muted-foreground">
+                        {e.empresa ?? 'Sin empresa'} {e.sede ? `· ${e.sede}` : ''}
+                      </td>
+                      <td className="px-2 py-1">{formatearFecha(e.fecha_vencimiento)}</td>
+                      <td className="px-2 py-1">
+                        <Badge tono={TONO_VENCIMIENTO[estado]}>{ETIQUETA_VENCIMIENTO[estado]}</Badge>
+                      </td>
+                    </tr>
+                  )
+                })}
+                {filtrados.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
+                      Sin {singular}s con estos filtros.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Días vencido/por vencer</div>
+            <ResponsiveContainer width="100%" height={Math.max(140, porCodigo.length * 20)}>
+              <BarChart data={porCodigo} layout="vertical" margin={{ left: 0, right: 20, top: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 9.5 }} />
+                <YAxis type="category" dataKey="codigo" width={54} tick={{ fontSize: 9.5 }} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: 'var(--border)' }}
+                  formatter={(v: number, _n, item) => [`${v} día(s)`, ETIQUETA_VENCIMIENTO[(item.payload as { estado: keyof typeof ETIQUETA_VENCIMIENTO }).estado]]}
+                />
+                <Bar dataKey="dias" radius={[0, 4, 4, 0]}>
+                  {porCodigo.map((e) => (
+                    <Cell key={e.codigo} fill={e.estado === 'vencido' ? 'var(--error)' : 'var(--advertencia)'} />
+                  ))}
+                  <LabelList dataKey="dias" position="right" style={{ fontSize: 9, fontWeight: 600, fill: 'var(--foreground)' }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
