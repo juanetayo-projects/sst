@@ -1,5 +1,6 @@
 import { PageHeader } from '@/components/ui'
 import { CrudSimple } from '@/components/admin/CrudSimple'
+import { CrudElementosBotiquin } from '@/components/admin/CrudElementosBotiquin'
 
 export default function Catalogos() {
   return (
@@ -9,6 +10,7 @@ export default function Catalogos() {
         <CrudSimple tabla="empresas" titulo="Empresas" />
         <CrudSimple tabla="sedes" titulo="Sedes" />
         <CrudSimple tabla="unidades_medida" titulo="Unidades de Medida" />
+        <CrudElementosBotiquin />
       </div>
     </div>
   )

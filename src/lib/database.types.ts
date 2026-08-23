@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      catalogo_elementos_botiquin: {
+        Row: {
+          activo: boolean
+          cantidad: string | null
+          forma: string
+          id: string
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activo?: boolean
+          cantidad?: string | null
+          forma?: string
+          id?: string
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          activo?: boolean
+          cantidad?: string | null
+          forma?: string
+          id?: string
+          nombre?: string
+          orden?: number
+        }
+        Relationships: []
+      }
       categorias_pregunta: {
         Row: {
           color: string

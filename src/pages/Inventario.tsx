@@ -7,13 +7,14 @@ import { formatearFecha } from '@/lib/utils'
 import { exportarExcel } from '@/lib/exportar'
 import { estadoVencimiento, ETIQUETA_VENCIMIENTO, TONO_VENCIMIENTO } from '@/lib/inventario'
 import {
-  CONTENIDO_BOTIQUIN_TIPO_A,
   ETIQUETA_TIPO_BOTIQUIN,
   DESCRIPCION_TIPO_BOTIQUIN,
   leerAtributosBotiquin,
   type TipoBotiquin,
+  type ElementoBotiquin,
 } from '@/lib/botiquines'
 import { IconoElementoBotiquin } from '@/components/inventario/IconoElementoBotiquin'
+import { CampoListaOtra } from '@/components/inventario/CampoListaOtra'
 import { PageHeader, FilterBar, MetricCard } from '@/components/ui'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -33,6 +34,19 @@ const TODOS = '__todos__'
 export default function Inventario() {
   const { perfil } = useAuth()
   const puedeEscribir = perfil?.role === 'admin' || perfil?.role === 'inspector'
+
+  const [empresasCatalogo, setEmpresasCatalogo] = useState<string[]>([])
+  const [sedesCatalogo, setSedesCatalogo] = useState<string[]>([])
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from('empresas').select('nombre').eq('activo', true).order('orden'),
+      supabase.from('sedes').select('nombre').eq('activo', true).order('orden'),
+    ]).then(([empresasRes, sedesRes]) => {
+      setEmpresasCatalogo((empresasRes.data ?? []).map((e) => e.nombre))
+      setSedesCatalogo((sedesRes.data ?? []).map((s) => s.nombre))
+    })
+  }, [])
 
   return (
     <div>
@@ -55,10 +69,10 @@ export default function Inventario() {
         </TabsList>
 
         <TabsContent value="extintores">
-          <SeccionExtintores puedeEscribir={puedeEscribir} />
+          <SeccionExtintores puedeEscribir={puedeEscribir} empresasCatalogo={empresasCatalogo} sedesCatalogo={sedesCatalogo} />
         </TabsContent>
         <TabsContent value="botiquines">
-          <SeccionBotiquines puedeEscribir={puedeEscribir} />
+          <SeccionBotiquines puedeEscribir={puedeEscribir} empresasCatalogo={empresasCatalogo} sedesCatalogo={sedesCatalogo} />
         </TabsContent>
       </Tabs>
     </div>
@@ -95,7 +109,7 @@ const VACIO_EXTINTOR: Omit<Extintor, 'id' | 'activo'> = {
   fecha_vencimiento: '',
 }
 
-function SeccionExtintores({ puedeEscribir }: { puedeEscribir: boolean }) {
+function SeccionExtintores({ puedeEscribir, sedesCatalogo }: { puedeEscribir: boolean; empresasCatalogo: string[]; sedesCatalogo: string[] }) {
   const [items, setItems] = useState<Extintor[]>([])
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
@@ -108,6 +122,7 @@ function SeccionExtintores({ puedeEscribir }: { puedeEscribir: boolean }) {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [editando, setEditando] = useState<Extintor | null>(null)
   const [form, setForm] = useState(VACIO_EXTINTOR)
+  const [sedeEsOtra, setSedeEsOtra] = useState(false)
   const [guardando, setGuardando] = useState(false)
 
   const [aEliminar, setAEliminar] = useState<Extintor | null>(null)
@@ -133,6 +148,7 @@ function SeccionExtintores({ puedeEscribir }: { puedeEscribir: boolean }) {
   function abrirNuevo() {
     setEditando(null)
     setForm(VACIO_EXTINTOR)
+    setSedeEsOtra(false)
     setModalAbierto(true)
   }
 
@@ -149,6 +165,7 @@ function SeccionExtintores({ puedeEscribir }: { puedeEscribir: boolean }) {
       capacidad: item.capacidad ?? '',
       fecha_vencimiento: item.fecha_vencimiento ?? '',
     })
+    setSedeEsOtra(!!item.sede && !sedesCatalogo.includes(item.sede))
     setModalAbierto(true)
   }
 
@@ -506,7 +523,15 @@ function SeccionExtintores({ puedeEscribir }: { puedeEscribir: boolean }) {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="ext-sede">Sede</Label>
-                <Input id="ext-sede" value={form.sede ?? ''} onChange={(e) => setForm((f) => ({ ...f, sede: e.target.value }))} />
+                <CampoListaOtra
+                  id="ext-sede"
+                  opciones={sedesCatalogo}
+                  value={form.sede ?? ''}
+                  onChange={(v) => setForm((f) => ({ ...f, sede: v }))}
+                  esOtra={sedeEsOtra}
+                  onEsOtraChange={setSedeEsOtra}
+                  placeholder="Sede"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="ext-piso">Piso</Label>
@@ -591,16 +616,27 @@ const VACIO_BOTIQUIN = {
   elementos_faltantes: new Set<string>(),
 }
 
-function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
+function SeccionBotiquines({
+  puedeEscribir,
+  empresasCatalogo,
+  sedesCatalogo,
+}: {
+  puedeEscribir: boolean
+  empresasCatalogo: string[]
+  sedesCatalogo: string[]
+}) {
   const [items, setItems] = useState<Botiquin[]>([])
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [sedeFiltro, setSedeFiltro] = useState(TODOS)
   const [estadoFiltro, setEstadoFiltro] = useState(TODOS)
 
+  const [catalogoElementos, setCatalogoElementos] = useState<ElementoBotiquin[]>([])
+
   const [modalAbierto, setModalAbierto] = useState(false)
   const [editando, setEditando] = useState<Botiquin | null>(null)
   const [form, setForm] = useState(VACIO_BOTIQUIN)
+  const [empresaEsOtra, setEmpresaEsOtra] = useState(false)
   const [sedeEsOtra, setSedeEsOtra] = useState(false)
   const [guardando, setGuardando] = useState(false)
 
@@ -625,9 +661,19 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
 
   useEffect(cargar, [])
 
+  useEffect(() => {
+    supabase
+      .from('catalogo_elementos_botiquin')
+      .select('id,nombre,cantidad,forma')
+      .eq('activo', true)
+      .order('orden')
+      .then(({ data }) => setCatalogoElementos((data ?? []) as ElementoBotiquin[]))
+  }, [])
+
   function abrirNuevo() {
     setEditando(null)
     setForm(VACIO_BOTIQUIN)
+    setEmpresaEsOtra(false)
     setSedeEsOtra(false)
     setModalAbierto(true)
   }
@@ -645,7 +691,8 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
       tipo_botiquin: atributos.tipo_botiquin,
       elementos_faltantes: new Set(atributos.elementos_faltantes),
     })
-    setSedeEsOtra(false)
+    setEmpresaEsOtra(!!item.empresa && !empresasCatalogo.includes(item.empresa))
+    setSedeEsOtra(!!item.sede && !sedesCatalogo.includes(item.sede))
     setModalAbierto(true)
   }
 
@@ -729,7 +776,7 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
       filas: filtrados.map((i) => {
         const atributos = leerAtributosBotiquin(i.atributos)
         const faltantes = atributos.elementos_faltantes
-          .map((id) => CONTENIDO_BOTIQUIN_TIPO_A.find((e) => e.id === id)?.nombre ?? id)
+          .map((id) => catalogoElementos.find((e) => e.id === id)?.nombre ?? id)
           .join(', ')
         return {
           codigo: i.codigo,
@@ -749,8 +796,9 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
   return (
     <div>
       <p className="mb-4 text-xs text-muted-foreground">
-        Contenido mínimo según la Resolución 705 de 2007 (Ministerio de Protección Social). Al hacer la ronda, marca en cada botiquín los
-        elementos que hagan falta o estén vencidos — quedan visibles aquí como pendientes de reponer, para reportarlos a Compras.
+        Contenido según la Resolución 705 de 2007 (Ministerio de Protección Social) — el catálogo de elementos se administra en{' '}
+        <span className="font-medium">Administración → Catálogos</span>. Al hacer la ronda, marca en cada botiquín los elementos que hagan
+        falta o estén vencidos — quedan visibles aquí como pendientes de reponer, para reportarlos a Compras.
       </p>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -889,7 +937,7 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
         className="mt-3 text-xs font-medium text-[var(--cac-azul)] hover:underline"
         onClick={() => setVerContenido({ id: '', codigo: '', empresa: null, sede: null, piso: null, ubicacion: null, fecha_vencimiento: null, activo: true, atributos: {} })}
       >
-        Ver contenido mínimo de referencia (Tipo A)
+        Ver catálogo de elementos de referencia
       </button>
 
       <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
@@ -906,43 +954,27 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="bot-empresa">Empresa</Label>
-                <Input id="bot-empresa" value={form.empresa} onChange={(e) => setForm((f) => ({ ...f, empresa: e.target.value }))} />
+                <CampoListaOtra
+                  id="bot-empresa"
+                  opciones={empresasCatalogo}
+                  value={form.empresa}
+                  onChange={(v) => setForm((f) => ({ ...f, empresa: v }))}
+                  esOtra={empresaEsOtra}
+                  onEsOtraChange={setEmpresaEsOtra}
+                  placeholder="Empresa"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="bot-sede">Sede</Label>
-                {sedeEsOtra || sedes.length === 0 ? (
-                  <Input
-                    id="bot-sede"
-                    autoFocus={sedeEsOtra}
-                    placeholder="Nombre de la sede"
-                    value={form.sede}
-                    onChange={(e) => setForm((f) => ({ ...f, sede: e.target.value }))}
-                  />
-                ) : (
-                  <Select
-                    value={form.sede || undefined}
-                    onValueChange={(v) => {
-                      if (v === '__otra__') {
-                        setSedeEsOtra(true)
-                        setForm((f) => ({ ...f, sede: '' }))
-                      } else {
-                        setForm((f) => ({ ...f, sede: v }))
-                      }
-                    }}
-                  >
-                    <SelectTrigger id="bot-sede">
-                      <SelectValue placeholder="Selecciona la sede…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sedes.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="__otra__">+ Otra sede…</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
+                <CampoListaOtra
+                  id="bot-sede"
+                  opciones={sedesCatalogo}
+                  value={form.sede}
+                  onChange={(v) => setForm((f) => ({ ...f, sede: v }))}
+                  esOtra={sedeEsOtra}
+                  onEsOtraChange={setSedeEsOtra}
+                  placeholder="Sede"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="bot-piso">Piso</Label>
@@ -979,7 +1011,7 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
             <div className="mt-4">
               <Label className="mb-1.5 block">Contenido — desmarca lo que haga falta o esté vencido</Label>
               <div className="grid grid-cols-1 gap-1.5 rounded-lg border border-border p-2.5 sm:grid-cols-2">
-                {CONTENIDO_BOTIQUIN_TIPO_A.map((elemento) => {
+                {catalogoElementos.map((elemento) => {
                   const presente = !form.elementos_faltantes.has(elemento.id)
                   return (
                     <label key={elemento.id} className="flex items-center gap-2 rounded-md p-1 text-xs hover:bg-accent/50">
@@ -1021,13 +1053,13 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
         <DialogContent className="max-w-lg">
           <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
             <Syringe className="size-5 text-white" />
-            <DialogTitle className="text-white">{verContenido?.codigo ? `Contenido — ${verContenido.codigo}` : 'Contenido mínimo — Tipo A'}</DialogTitle>
+            <DialogTitle className="text-white">{verContenido?.codigo ? `Contenido — ${verContenido.codigo}` : 'Catálogo de elementos'}</DialogTitle>
           </DialogHeader>
           {verContenido?.codigo && (
             <p className="mb-2 text-xs text-muted-foreground">{DESCRIPCION_TIPO_BOTIQUIN[leerAtributosBotiquin(verContenido.atributos).tipo_botiquin]}</p>
           )}
           <div className="space-y-1">
-            {CONTENIDO_BOTIQUIN_TIPO_A.map((elemento) => {
+            {catalogoElementos.map((elemento) => {
               const faltante = verContenido?.codigo ? leerAtributosBotiquin(verContenido.atributos).elementos_faltantes.includes(elemento.id) : false
               return (
                 <div key={elemento.id} className="flex items-center gap-2.5 rounded-lg border border-border/60 p-1.5">
