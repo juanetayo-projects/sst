@@ -510,52 +510,13 @@ export default function ProgramacionRondas() {
           </div>
         </div>
 
-        {!cargando && (
-          <div className="mb-4">
-            <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Próximos 14 días</div>
-            <Card>
-              <CardContent className="space-y-1 p-3">
-                {proximos14Dias.map((d) => {
-                  const total = d.items.length
-                  const realizadas = d.items.filter((p) => p.estado === 'realizada').length
-                  const canceladas = d.items.filter((p) => p.estado === 'cancelada').length
-                  const pendientes = total - realizadas - canceladas
-                  return (
-                    <button
-                      key={d.fecha}
-                      type="button"
-                      disabled={total === 0}
-                      onClick={() => total > 0 && setDiaSeleccionado({ fecha: d.fecha, items: d.items })}
-                      className={cn(
-                        'grid w-full grid-cols-[56px_1fr_24px] items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition-colors',
-                        total > 0 ? 'cursor-pointer hover:bg-accent' : 'cursor-default opacity-50'
-                      )}
-                    >
-                      <span className="font-medium capitalize">{d.label}</span>
-                      <span className="relative block h-2.5 w-full overflow-hidden rounded-full bg-[var(--neutro-suave)]">
-                        {total > 0 && (
-                          <span className="absolute inset-y-0 left-0 flex overflow-hidden rounded-full" style={{ width: `${(total / maxProximos) * 100}%` }}>
-                            {pendientes > 0 && <span className="h-full" style={{ width: `${(pendientes / total) * 100}%`, backgroundColor: 'var(--advertencia)' }} />}
-                            {realizadas > 0 && <span className="h-full" style={{ width: `${(realizadas / total) * 100}%`, backgroundColor: 'var(--exito)' }} />}
-                            {canceladas > 0 && <span className="h-full" style={{ width: `${(canceladas / total) * 100}%`, backgroundColor: 'var(--neutro)' }} />}
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-right font-semibold text-muted-foreground">{total || '—'}</span>
-                    </button>
-                  )
-                })}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
         {cargando ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Cargando…</div>
         ) : (
           <>
             <TabsContent value="calendario">
-              <div className="mx-auto max-w-md">
+              <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+                <div className="mx-auto w-full max-w-md">
                 <Card className="overflow-hidden">
                   <div className="franja-institucional flex items-center justify-between px-3 py-2">
                     <button
@@ -638,6 +599,45 @@ export default function ProgramacionRondas() {
                     <p className="mt-2 text-[10px] text-muted-foreground">Los puntos de color en cada día indican la categoría de la ronda programada.</p>
                   </CardContent>
                 </Card>
+                </div>
+
+                <div>
+                  <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Próximos 14 días</div>
+                  <Card>
+                    <CardContent className="space-y-1 p-3">
+                      {proximos14Dias.map((d) => {
+                        const total = d.items.length
+                        const realizadas = d.items.filter((p) => p.estado === 'realizada').length
+                        const canceladas = d.items.filter((p) => p.estado === 'cancelada').length
+                        const pendientes = total - realizadas - canceladas
+                        return (
+                          <button
+                            key={d.fecha}
+                            type="button"
+                            disabled={total === 0}
+                            onClick={() => total > 0 && setDiaSeleccionado({ fecha: d.fecha, items: d.items })}
+                            className={cn(
+                              'grid w-full grid-cols-[56px_1fr_24px] items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition-colors',
+                              total > 0 ? 'cursor-pointer hover:bg-accent' : 'cursor-default opacity-50'
+                            )}
+                          >
+                            <span className="font-medium capitalize">{d.label}</span>
+                            <span className="relative block h-2.5 w-full overflow-hidden rounded-full bg-[var(--neutro-suave)]">
+                              {total > 0 && (
+                                <span className="absolute inset-y-0 left-0 flex overflow-hidden rounded-full" style={{ width: `${(total / maxProximos) * 100}%` }}>
+                                  {pendientes > 0 && <span className="h-full" style={{ width: `${(pendientes / total) * 100}%`, backgroundColor: 'var(--advertencia)' }} />}
+                                  {realizadas > 0 && <span className="h-full" style={{ width: `${(realizadas / total) * 100}%`, backgroundColor: 'var(--exito)' }} />}
+                                  {canceladas > 0 && <span className="h-full" style={{ width: `${(canceladas / total) * 100}%`, backgroundColor: 'var(--neutro)' }} />}
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-right font-semibold text-muted-foreground">{total || '—'}</span>
+                          </button>
+                        )
+                      })}
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </TabsContent>
 
@@ -958,8 +958,9 @@ export default function ProgramacionRondas() {
                       {p.tipos_inspeccion?.nombre ?? '—'}
                     </span>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {p.empresa ?? 'Sin empresa'} {p.sede ? `· ${p.sede}` : ''}
-                      {p.responsable ? ` · ${p.responsable.nombre_completo}` : ''}
+                      {p.empresa ?? 'Sin empresa'}
+                      {p.sede ? ` · ${p.sede}` : ''}
+                      {p.responsable ? ` · Responsable: ${p.responsable.nombre_completo}` : ''}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
