@@ -960,7 +960,6 @@ export default function ProgramacionRondas() {
                     <div className="mt-1 text-xs text-muted-foreground">
                       {p.empresa ?? 'Sin empresa'}
                       {p.sede ? ` · ${p.sede}` : ''}
-                      {p.responsable ? ` · Responsable: ${p.responsable.nombre_completo}` : ''}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
@@ -983,6 +982,11 @@ export default function ProgramacionRondas() {
                     )}
                   </div>
                 </div>
+                {p.responsable && (
+                  <div className="mt-1.5 w-full text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">Responsable:</span> {p.responsable.nombre_completo}
+                  </div>
+                )}
               </div>
             ))}
           </div>

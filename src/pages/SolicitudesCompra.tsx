@@ -287,50 +287,50 @@ export default function SolicitudesCompra() {
             <thead>
               <tr className="franja-institucional text-left text-xs text-white">
                 {esAdmin && (
-                  <th className="w-8 px-3 py-2.5">
+                  <th className="w-8 px-3 py-1.5">
                     <Checkbox
                       checked={filas.length > 0 && seleccionadas.size === filas.length}
                       onCheckedChange={(v) => setSeleccionadas(v === true ? new Set(filas.map((f) => f.id)) : new Set())}
                     />
                   </th>
                 )}
-                <th className="px-3 py-2.5 font-semibold">Fecha</th>
-                <th className="px-3 py-2.5 font-semibold">Ronda</th>
-                <th className="px-3 py-2.5 font-semibold">Empresa / Sede</th>
-                <th className="px-3 py-2.5 font-semibold">Elemento</th>
-                <th className="px-3 py-2.5 font-semibold">Cant.</th>
-                <th className="px-3 py-2.5 font-semibold">UM</th>
-                <th className="px-3 py-2.5 font-semibold">Observación</th>
-                <th className="px-3 py-2.5 font-semibold">Estado</th>
-                {esAdmin && <th className="px-3 py-2.5 font-semibold"></th>}
+                <th className="px-3 py-1.5 font-semibold">Fecha</th>
+                <th className="px-3 py-1.5 font-semibold">Ronda</th>
+                <th className="px-3 py-1.5 font-semibold">Empresa / Sede</th>
+                <th className="px-3 py-1.5 font-semibold">Elemento</th>
+                <th className="px-3 py-1.5 font-semibold">Cant.</th>
+                <th className="px-3 py-1.5 font-semibold">UM</th>
+                <th className="px-3 py-1.5 font-semibold">Observación</th>
+                <th className="px-3 py-1.5 font-semibold">Estado</th>
+                {esAdmin && <th className="px-3 py-1.5 font-semibold"></th>}
               </tr>
             </thead>
             <tbody>
               {filas.map((f, i) => (
                 <tr key={f.id} className="border-b border-border/60 last:border-0" style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}>
                   {esAdmin && (
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-1.5">
                       <Checkbox checked={seleccionadas.has(f.id)} onCheckedChange={() => alternarSeleccion(f.id)} />
                     </td>
                   )}
-                  <td className="px-3 py-2">{formatearFecha(f.fecha)}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-1.5">{formatearFecha(f.fecha)}</td>
+                  <td className="px-3 py-1.5">
                     <Link to={`/inspecciones/${f.inspeccion_id}`} className="hover:underline">
                       {f.inspecciones?.tipos_inspeccion?.nombre ?? '—'}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">
+                  <td className="px-3 py-1.5 text-muted-foreground">
                     {f.inspecciones?.empresa ?? '—'} {f.inspecciones?.sede ? `· ${f.inspecciones.sede}` : ''}
                   </td>
-                  <td className="px-3 py-2">{f.tipo_elemento}</td>
-                  <td className="px-3 py-2 text-right tabular">{f.cantidad}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{f.unidad_medida ?? '—'}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{f.observacion ?? '—'}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-1.5">{f.tipo_elemento}</td>
+                  <td className="px-3 py-1.5 text-right tabular">{f.cantidad}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{f.unidad_medida ?? '—'}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{f.observacion ?? '—'}</td>
+                  <td className="px-3 py-1.5">
                     <Badge tono={TONO_ESTADO[f.estado]}>{ETIQUETA_ESTADO[f.estado]}</Badge>
                   </td>
                   {esAdmin && (
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-1.5">
                       <div className="flex justify-end gap-1">
                         {f.estado === 'solicitado' && (
                           <Button variant="ghost" size="icon" title="Marcar recibido" onClick={() => marcarRecibido(f.id)}>

@@ -345,13 +345,13 @@ export default function Vencimientos() {
           <table className="w-full text-sm">
             <thead>
               <tr className="franja-institucional text-left text-xs text-white">
-                <th className="px-3 py-2.5 font-semibold">Código</th>
-                <th className="px-3 py-2.5 font-semibold">Sede</th>
-                <th className="px-3 py-2.5 font-semibold">Ubicación</th>
-                <th className="px-3 py-2.5 font-semibold">Tipo</th>
-                <th className="px-3 py-2.5 font-semibold">Vencimiento</th>
-                <th className="px-3 py-2.5 font-semibold">Estado</th>
-                {esAdmin && <th className="px-3 py-2.5 font-semibold"></th>}
+                <th className="px-3 py-1.5 font-semibold">Código</th>
+                <th className="px-3 py-1.5 font-semibold">Sede</th>
+                <th className="px-3 py-1.5 font-semibold">Ubicación</th>
+                <th className="px-3 py-1.5 font-semibold">Tipo</th>
+                <th className="px-3 py-1.5 font-semibold">Vencimiento</th>
+                <th className="px-3 py-1.5 font-semibold">Estado</th>
+                {esAdmin && <th className="px-3 py-1.5 font-semibold"></th>}
               </tr>
             </thead>
             <tbody>
@@ -359,16 +359,16 @@ export default function Vencimientos() {
                 const estado = estadoVencimiento(i.fecha_vencimiento)
                 return (
                   <tr key={i.id} className="border-b border-border/60 last:border-0" style={{ backgroundColor: idx % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}>
-                    <td className="px-3 py-2 font-medium">{i.codigo}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{i.sede ?? '—'}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{i.ubicacion ?? '—'}</td>
-                    <td className="px-3 py-2">{i.tipo ?? '—'}</td>
-                    <td className="px-3 py-2">{formatearFecha(i.fecha_vencimiento)}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-1.5 font-medium">{i.codigo}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">{i.sede ?? '—'}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">{i.ubicacion ?? '—'}</td>
+                    <td className="px-3 py-1.5">{i.tipo ?? '—'}</td>
+                    <td className="px-3 py-1.5">{formatearFecha(i.fecha_vencimiento)}</td>
+                    <td className="px-3 py-1.5">
                       <Badge tono={TONO_VENCIMIENTO[estado]}>{ETIQUETA_VENCIMIENTO[estado]}</Badge>
                     </td>
                     {esAdmin && (
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-1.5">
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="icon" title="Editar" onClick={() => abrirEditar(i)}>
                             <Pencil className="size-3.5" />
