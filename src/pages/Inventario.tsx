@@ -44,11 +44,13 @@ export default function Inventario() {
 
       <Tabs defaultValue="extintores">
         <TabsList>
-          <TabsTrigger value="extintores">
-            <Flame className="size-3.5" /> Extintores
+          <TabsTrigger value="extintores" className="inline-flex items-center gap-1.5">
+            <Flame className="size-3.5" />
+            Extintores
           </TabsTrigger>
-          <TabsTrigger value="botiquines">
-            <Syringe className="size-3.5" /> Botiquines
+          <TabsTrigger value="botiquines" className="inline-flex items-center gap-1.5">
+            <Syringe className="size-3.5" />
+            Botiquines
           </TabsTrigger>
         </TabsList>
 
@@ -249,108 +251,105 @@ function SeccionExtintores({ puedeEscribir }: { puedeEscribir: boolean }) {
 
   return (
     <div>
-      {puedeEscribir && (
-        <div className="mb-4 flex justify-end">
-          <Button size="sm" onClick={abrirNuevo}>
-            <Plus />
-            Nuevo extintor
-          </Button>
-        </div>
-      )}
-
       <Tabs defaultValue="listado">
-        <TabsList>
-          <TabsTrigger value="listado">Listado</TabsTrigger>
-          <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
-        </TabsList>
+        <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-3 shadow-relieve-sm">
+          <TabsList>
+            <TabsTrigger value="listado">Listado</TabsTrigger>
+            <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
+          </TabsList>
+          <div className="mx-1 hidden h-8 w-px self-end bg-border sm:block" />
+          <div className="space-y-1.5">
+            <Label className="text-xs">Buscar</Label>
+            <Input placeholder="Código, sede, ubicación…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="h-8 w-44 text-xs" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Sede</Label>
+            <Select value={sedeFiltro} onValueChange={setSedeFiltro}>
+              <SelectTrigger className="h-8 w-36 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODOS}>Todas</SelectItem>
+                {sedes.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Piso</Label>
+            <Select value={pisoFiltro} onValueChange={setPisoFiltro}>
+              <SelectTrigger className="h-8 w-28 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODOS}>Todos</SelectItem>
+                {pisos.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Agente</Label>
+            <Select value={agenteFiltro} onValueChange={setAgenteFiltro}>
+              <SelectTrigger className="h-8 w-28 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODOS}>Todos</SelectItem>
+                {agentes.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {a}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tipo</Label>
+            <Select value={tipoFiltro} onValueChange={setTipoFiltro}>
+              <SelectTrigger className="h-8 w-28 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODOS}>Todos</SelectItem>
+                {tiposExtintor.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Vencimiento</Label>
+            <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+              <SelectTrigger className="h-8 w-36 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={TODOS}>Todos</SelectItem>
+                <SelectItem value="vencido">Vencido</SelectItem>
+                <SelectItem value="proximo">Próximo a vencer</SelectItem>
+                <SelectItem value="vigente">Vigente</SelectItem>
+                <SelectItem value="sin_fecha">Sin fecha</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {puedeEscribir && (
+            <Button size="sm" className="ml-auto" onClick={abrirNuevo}>
+              <Plus />
+              Nuevo extintor
+            </Button>
+          )}
+        </div>
 
         <TabsContent value="listado">
-          <FilterBar className="mt-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Buscar</Label>
-              <Input placeholder="Código, sede, ubicación…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="h-8 w-44 text-xs" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Sede</Label>
-              <Select value={sedeFiltro} onValueChange={setSedeFiltro}>
-                <SelectTrigger className="h-8 w-36 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TODOS}>Todas</SelectItem>
-                  {sedes.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Piso</Label>
-              <Select value={pisoFiltro} onValueChange={setPisoFiltro}>
-                <SelectTrigger className="h-8 w-28 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TODOS}>Todos</SelectItem>
-                  {pisos.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Agente</Label>
-              <Select value={agenteFiltro} onValueChange={setAgenteFiltro}>
-                <SelectTrigger className="h-8 w-28 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TODOS}>Todos</SelectItem>
-                  {agentes.map((a) => (
-                    <SelectItem key={a} value={a}>
-                      {a}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Tipo</Label>
-              <Select value={tipoFiltro} onValueChange={setTipoFiltro}>
-                <SelectTrigger className="h-8 w-28 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TODOS}>Todos</SelectItem>
-                  {tiposExtintor.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Vencimiento</Label>
-              <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-                <SelectTrigger className="h-8 w-36 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={TODOS}>Todos</SelectItem>
-                  <SelectItem value="vencido">Vencido</SelectItem>
-                  <SelectItem value="proximo">Próximo a vencer</SelectItem>
-                  <SelectItem value="vigente">Vigente</SelectItem>
-                  <SelectItem value="sin_fecha">Sin fecha</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </FilterBar>
-
           <Card className="overflow-x-auto">
             {cargando ? (
               <div className="p-4">

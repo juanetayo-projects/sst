@@ -16,6 +16,7 @@ import {
   ShoppingCart,
   ListChecks,
   HeartPulse,
+  ClipboardCheck,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -124,8 +125,11 @@ export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
         <nav className="scroll-sutil-oscuro flex-1 space-y-1 overflow-y-auto p-3">
           <Accordion type="multiple" defaultValue={['rondas']}>
             <AccordionItem value="rondas" className="border-none">
-              <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:no-underline">
-                Rondas
+              <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:no-underline [&>svg]:text-white/60">
+                <span className="flex items-center gap-2.5">
+                  <ClipboardCheck className="size-4 shrink-0" />
+                  RONDAS
+                </span>
               </AccordionTrigger>
               <AccordionContent className="space-y-1 pb-0 pl-2">
                 {itemsVisibles.map((item) => (
@@ -135,7 +139,7 @@ export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
             </AccordionItem>
 
             <AccordionItem value="arl" className="border-none">
-              <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:no-underline">
+              <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:no-underline [&>svg]:text-white/60">
                 <span className="flex items-center gap-2.5">
                   <HeartPulse className="size-4 shrink-0" />
                   ARL
@@ -152,7 +156,7 @@ export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () 
           {perfil?.role === 'admin' && (
             <Accordion type="single" collapsible defaultValue={enAdmin ? 'admin' : undefined} className="pt-1">
               <AccordionItem value="admin" className="border-none">
-                <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:no-underline">
+                <AccordionTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:no-underline [&>svg]:text-white/60">
                   Administración
                 </AccordionTrigger>
                 <AccordionContent className="space-y-1 pb-0 pl-2">
