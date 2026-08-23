@@ -941,13 +941,13 @@ function SeccionBotiquines({
       </button>
 
       <Dialog open={modalAbierto} onOpenChange={setModalAbierto}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <form onSubmit={guardar}>
             <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
               <Syringe className="size-5 text-white" />
               <DialogTitle className="text-white">{editando ? 'Editar botiquín' : 'Nuevo botiquín'}</DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label htmlFor="bot-codigo">Código</Label>
                 <Input id="bot-codigo" required placeholder="BOT-TOR-1-01" value={form.codigo} onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))} />
@@ -980,10 +980,6 @@ function SeccionBotiquines({
                 <Label htmlFor="bot-piso">Piso</Label>
                 <Input id="bot-piso" value={form.piso} onChange={(e) => setForm((f) => ({ ...f, piso: e.target.value }))} />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="bot-ubicacion">Ubicación</Label>
-                <Input id="bot-ubicacion" value={form.ubicacion} onChange={(e) => setForm((f) => ({ ...f, ubicacion: e.target.value }))} />
-              </div>
               <div className="space-y-1.5">
                 <Label>Tipo de botiquín</Label>
                 <Select value={form.tipo_botiquin} onValueChange={(v) => setForm((f) => ({ ...f, tipo_botiquin: v as TipoBotiquin }))}>
@@ -1006,15 +1002,23 @@ function SeccionBotiquines({
                 </Label>
                 <Input id="bot-vencimiento" type="date" value={form.fecha_vencimiento} onChange={(e) => setForm((f) => ({ ...f, fecha_vencimiento: e.target.value }))} />
               </div>
+              <div className="space-y-1.5 sm:col-span-3">
+                <Label htmlFor="bot-ubicacion">Ubicación</Label>
+                <Input id="bot-ubicacion" value={form.ubicacion} onChange={(e) => setForm((f) => ({ ...f, ubicacion: e.target.value }))} />
+              </div>
             </div>
 
             <div className="mt-4">
               <Label className="mb-1.5 block">Contenido — desmarca lo que haga falta o esté vencido</Label>
-              <div className="grid grid-cols-1 gap-1.5 rounded-lg border border-border p-2.5 sm:grid-cols-2">
+              <div className="grid max-h-40 grid-cols-2 gap-1 overflow-y-auto rounded-lg border border-border p-2 sm:grid-cols-3">
                 {catalogoElementos.map((elemento) => {
                   const presente = !form.elementos_faltantes.has(elemento.id)
                   return (
-                    <label key={elemento.id} className="flex items-center gap-2 rounded-md p-1 text-xs hover:bg-accent/50">
+                    <label
+                      key={elemento.id}
+                      title={elemento.cantidad ?? undefined}
+                      className="flex items-center gap-1.5 rounded-md p-1 text-xs hover:bg-accent/50"
+                    >
                       <Checkbox
                         checked={presente}
                         onCheckedChange={(v) =>
@@ -1026,11 +1030,8 @@ function SeccionBotiquines({
                           })
                         }
                       />
-                      <IconoElementoBotiquin forma={elemento.forma} size={22} />
-                      <span className="min-w-0">
-                        <span className="block font-medium">{elemento.nombre}</span>
-                        <span className="block text-muted-foreground">{elemento.cantidad}</span>
-                      </span>
+                      <IconoElementoBotiquin forma={elemento.forma} size={18} />
+                      <span className="truncate font-medium">{elemento.nombre}</span>
                     </label>
                   )
                 })}
