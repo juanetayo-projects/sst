@@ -341,6 +341,38 @@ export default function ProgramacionRondas() {
 
   const listaVencidas = useMemo(() => programaciones.filter(esVencida), [programaciones])
 
+  // ── Próximos 14 días (panorama rápido, independiente de la pestaña activa) ──
+  const proximos14Dias = useMemo(() => {
+    const dias: { fecha: string; label: string; items: Programacion[] }[] = []
+    for (let i = 0; i < 14; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() + i)
+      const iso = d.toISOString().slice(0, 10)
+      const items = programaciones.filter((p) => p.fecha_programada === iso)
+      const label = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : format(d, 'EEE d', { locale: es })
+      dias.push({ fecha: iso, label, items })
+    }
+    return dias
+  }, [programaciones])
+
+  const maxProximos = useMemo(() => Math.max(1, ...proximos14Dias.map((d) => d.items.length)), [proximos14Dias])
+
+  // ── Por responsable ──
+  const porResponsable = useMemo(() => {
+    const mapa = new Map<string, { nombre: string; pendientes: number; vencidas: number; realizadas: number; canceladas: number; total: number }>()
+    for (const p of programaciones) {
+      const nombre = p.responsable?.nombre_completo ?? 'Sin asignar'
+      const actual = mapa.get(nombre) ?? { nombre, pendientes: 0, vencidas: 0, realizadas: 0, canceladas: 0, total: 0 }
+      if (p.estado === 'cancelada') actual.canceladas++
+      else if (p.estado === 'realizada') actual.realizadas++
+      else if (esVencida(p)) actual.vencidas++
+      else actual.pendientes++
+      actual.total++
+      mapa.set(nombre, actual)
+    }
+    return Array.from(mapa.values()).sort((a, b) => b.total - a.total)
+  }, [programaciones])
+
   const subtituloFiltros = useMemo(() => {
     const partes = [
       `Tipo: ${tipoId === TODOS ? 'Todos' : (tipos.find((t) => t.id === tipoId)?.nombre ?? 'Todos')}`,
@@ -477,6 +509,46 @@ export default function ProgramacionRondas() {
             <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="h-8 w-32 text-xs" />
           </div>
         </div>
+
+        {!cargando && (
+          <div className="mb-4">
+            <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Próximos 14 días</div>
+            <Card>
+              <CardContent className="space-y-1 p-3">
+                {proximos14Dias.map((d) => {
+                  const total = d.items.length
+                  const realizadas = d.items.filter((p) => p.estado === 'realizada').length
+                  const canceladas = d.items.filter((p) => p.estado === 'cancelada').length
+                  const pendientes = total - realizadas - canceladas
+                  return (
+                    <button
+                      key={d.fecha}
+                      type="button"
+                      disabled={total === 0}
+                      onClick={() => total > 0 && setDiaSeleccionado({ fecha: d.fecha, items: d.items })}
+                      className={cn(
+                        'grid w-full grid-cols-[56px_1fr_24px] items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition-colors',
+                        total > 0 ? 'cursor-pointer hover:bg-accent' : 'cursor-default opacity-50'
+                      )}
+                    >
+                      <span className="font-medium capitalize">{d.label}</span>
+                      <span className="relative block h-2.5 w-full overflow-hidden rounded-full bg-[var(--neutro-suave)]">
+                        {total > 0 && (
+                          <span className="absolute inset-y-0 left-0 flex overflow-hidden rounded-full" style={{ width: `${(total / maxProximos) * 100}%` }}>
+                            {pendientes > 0 && <span className="h-full" style={{ width: `${(pendientes / total) * 100}%`, backgroundColor: 'var(--advertencia)' }} />}
+                            {realizadas > 0 && <span className="h-full" style={{ width: `${(realizadas / total) * 100}%`, backgroundColor: 'var(--exito)' }} />}
+                            {canceladas > 0 && <span className="h-full" style={{ width: `${(canceladas / total) * 100}%`, backgroundColor: 'var(--neutro)' }} />}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-right font-semibold text-muted-foreground">{total || '—'}</span>
+                    </button>
+                  )
+                })}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {cargando ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Cargando…</div>
@@ -691,6 +763,37 @@ export default function ProgramacionRondas() {
                     </Card>
                   </div>
                 </div>
+
+                {porResponsable.length > 0 && (
+                  <div>
+                    <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Por responsable</div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {porResponsable.map((r) => {
+                        const pctRealizadas = r.total > 0 ? Math.round((r.realizadas / r.total) * 100) : 0
+                        return (
+                          <Card key={r.nombre}>
+                            <CardContent className="p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="truncate text-sm font-semibold">{r.nombre}</span>
+                                <span className="shrink-0 text-xs font-semibold text-muted-foreground">{r.total} rondas</span>
+                              </div>
+                              <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-[var(--neutro-suave)]">
+                                {r.vencidas > 0 && <div style={{ width: `${(r.vencidas / r.total) * 100}%`, backgroundColor: 'var(--error)' }} />}
+                                {r.pendientes > 0 && <div style={{ width: `${(r.pendientes / r.total) * 100}%`, backgroundColor: 'var(--advertencia)' }} />}
+                                {r.realizadas > 0 && <div style={{ width: `${(r.realizadas / r.total) * 100}%`, backgroundColor: 'var(--exito)' }} />}
+                                {r.canceladas > 0 && <div style={{ width: `${(r.canceladas / r.total) * 100}%`, backgroundColor: 'var(--neutro)' }} />}
+                              </div>
+                              <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+                                <span>{pctRealizadas}% realizadas</span>
+                                {r.vencidas > 0 && <span>{r.vencidas} vencida{r.vencidas > 1 ? 's' : ''}</span>}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </>
