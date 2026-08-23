@@ -38,26 +38,110 @@ export default function App() {
             }
           >
             <Route index element={<DashboardPage />} />
-            <Route path="inspecciones" element={<Historial />} />
-            <Route path="estadisticas" element={<Estadisticas />} />
+            <Route
+              path="inspecciones"
+              element={
+                <ProtectedRoute modulo="inspecciones">
+                  <Historial />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="estadisticas"
+              element={
+                <ProtectedRoute modulo="estadisticas">
+                  <Estadisticas />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="informe-ejecutivo"
               element={
-                <ProtectedRoute ocultarAEncuestador>
+                <ProtectedRoute ocultarAEncuestador modulo="informe-ejecutivo">
                   <InformeEjecutivo />
                 </ProtectedRoute>
               }
             />
-            <Route path="infografia" element={<Infografia />} />
-            <Route path="programacion" element={<ProgramacionRondas />} />
-            <Route path="vencimientos" element={<Vencimientos />} />
-            <Route path="inventario" element={<Inventario />} />
-            <Route path="solicitudes-compra" element={<SolicitudesCompra />} />
-            <Route path="compromisos" element={<Compromisos />} />
-            <Route path="inspecciones/nueva" element={<SeleccionarTipoInspeccion />} />
-            <Route path="inspecciones/nueva/:codigo" element={<FormularioInspeccion />} />
-            <Route path="inspecciones/:id/editar" element={<FormularioInspeccion />} />
-            <Route path="inspecciones/:id" element={<DetalleInspeccion />} />
+            <Route
+              path="infografia"
+              element={
+                <ProtectedRoute modulo="infografia">
+                  <Infografia />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="programacion"
+              element={
+                <ProtectedRoute modulo="programacion">
+                  <ProgramacionRondas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="vencimientos"
+              element={
+                <ProtectedRoute modulo="vencimientos">
+                  <Vencimientos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="inventario"
+              element={
+                <ProtectedRoute modulo="inventario">
+                  <Inventario />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="solicitudes-compra"
+              element={
+                <ProtectedRoute modulo="solicitudes-compra">
+                  <SolicitudesCompra />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="compromisos"
+              element={
+                <ProtectedRoute modulo="compromisos">
+                  <Compromisos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="inspecciones/nueva"
+              element={
+                <ProtectedRoute modulo="inspecciones">
+                  <SeleccionarTipoInspeccion />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="inspecciones/nueva/:codigo"
+              element={
+                <ProtectedRoute modulo="inspecciones">
+                  <FormularioInspeccion />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="inspecciones/:id/editar"
+              element={
+                <ProtectedRoute modulo="inspecciones">
+                  <FormularioInspeccion />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="inspecciones/:id"
+              element={
+                <ProtectedRoute modulo="inspecciones">
+                  <DetalleInspeccion />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="admin/usuarios"
               element={

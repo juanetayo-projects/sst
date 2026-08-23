@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -19,7 +18,6 @@ import {
   ClipboardCheck,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
 
@@ -77,23 +75,9 @@ function ItemNav({
 }
 
 export function Sidebar({ abierto, onCerrar }: { abierto: boolean; onCerrar: () => void }) {
-  const { session, perfil } = useAuth()
+  const { perfil, modulosPermitidos } = useAuth()
   const { pathname } = useLocation()
   const enAdmin = pathname.startsWith('/admin')
-
-  const [modulosPermitidos, setModulosPermitidos] = useState<Set<string> | null>(null)
-
-  useEffect(() => {
-    if (!session || perfil?.role === 'admin') return
-    supabase
-      .from('permisos_modulo')
-      .select('modulo')
-      .eq('profile_id', session.user.id)
-      .then(({ data }) => {
-        // Sin filas = sin restricción (ve todos los módulos).
-        if (data && data.length > 0) setModulosPermitidos(new Set(data.map((r) => r.modulo)))
-      })
-  }, [session, perfil])
 
   const itemsVisibles = NAV_ITEMS.filter((item) => item.to !== '/informe-ejecutivo' || perfil?.role !== 'encuestador').filter(
     (item) => !item.modulo || !modulosPermitidos || modulosPermitidos.has(item.modulo)

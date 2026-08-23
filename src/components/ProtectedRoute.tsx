@@ -7,12 +7,15 @@ export function ProtectedRoute({
   children,
   soloAdmin = false,
   ocultarAEncuestador = false,
+  modulo,
 }: {
   children: React.ReactNode
   soloAdmin?: boolean
   ocultarAEncuestador?: boolean
+  /** Bloquea la ruta si el usuario tiene `permisos_modulo` configurados y este id no está entre ellos. */
+  modulo?: string
 }) {
-  const { session, perfil, loading } = useAuth()
+  const { session, perfil, modulosPermitidos, loading } = useAuth()
 
   if (loading) {
     return (
@@ -36,6 +39,7 @@ export function ProtectedRoute({
   }
   if (soloAdmin && perfil && perfil.role !== 'admin') return <Navigate to="/" replace />
   if (ocultarAEncuestador && perfil?.role === 'encuestador') return <Navigate to="/" replace />
+  if (modulo && modulosPermitidos && !modulosPermitidos.has(modulo)) return <Navigate to="/" replace />
 
   return <>{children}</>
 }
