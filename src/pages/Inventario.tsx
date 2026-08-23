@@ -601,6 +601,7 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [editando, setEditando] = useState<Botiquin | null>(null)
   const [form, setForm] = useState(VACIO_BOTIQUIN)
+  const [sedeEsOtra, setSedeEsOtra] = useState(false)
   const [guardando, setGuardando] = useState(false)
 
   const [verContenido, setVerContenido] = useState<Botiquin | null>(null)
@@ -627,6 +628,7 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
   function abrirNuevo() {
     setEditando(null)
     setForm(VACIO_BOTIQUIN)
+    setSedeEsOtra(false)
     setModalAbierto(true)
   }
 
@@ -643,6 +645,7 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
       tipo_botiquin: atributos.tipo_botiquin,
       elementos_faltantes: new Set(atributos.elementos_faltantes),
     })
+    setSedeEsOtra(false)
     setModalAbierto(true)
   }
 
@@ -907,7 +910,39 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="bot-sede">Sede</Label>
-                <Input id="bot-sede" value={form.sede} onChange={(e) => setForm((f) => ({ ...f, sede: e.target.value }))} />
+                {sedeEsOtra || sedes.length === 0 ? (
+                  <Input
+                    id="bot-sede"
+                    autoFocus={sedeEsOtra}
+                    placeholder="Nombre de la sede"
+                    value={form.sede}
+                    onChange={(e) => setForm((f) => ({ ...f, sede: e.target.value }))}
+                  />
+                ) : (
+                  <Select
+                    value={form.sede || undefined}
+                    onValueChange={(v) => {
+                      if (v === '__otra__') {
+                        setSedeEsOtra(true)
+                        setForm((f) => ({ ...f, sede: '' }))
+                      } else {
+                        setForm((f) => ({ ...f, sede: v }))
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="bot-sede">
+                      <SelectValue placeholder="Selecciona la sede…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sedes.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__otra__">+ Otra sede…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="bot-piso">Piso</Label>
@@ -933,7 +968,10 @@ function SeccionBotiquines({ puedeEscribir }: { puedeEscribir: boolean }) {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="bot-vencimiento">Próximo vencimiento (elemento más próximo a vencer)</Label>
+                <Label htmlFor="bot-vencimiento" className="block">
+                  Próximo vencimiento
+                  <span className="block text-xs font-normal text-muted-foreground">(elemento más próximo a vencer)</span>
+                </Label>
                 <Input id="bot-vencimiento" type="date" value={form.fecha_vencimiento} onChange={(e) => setForm((f) => ({ ...f, fecha_vencimiento: e.target.value }))} />
               </div>
             </div>

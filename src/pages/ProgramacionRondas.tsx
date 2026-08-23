@@ -357,6 +357,13 @@ export default function ProgramacionRondas() {
 
   const maxProximos = useMemo(() => Math.max(1, ...proximos14Dias.map((d) => d.items.length)), [proximos14Dias])
 
+  /** Agenda detallada de las próximas rondas (no canceladas) — llena el espacio junto a la franja de barras. */
+  const agendaProxima = useMemo(() => {
+    return proximos14Dias
+      .flatMap((d) => d.items.filter((p) => p.estado !== 'cancelada').map((p) => ({ ...p, _diaLabel: d.label })))
+      .slice(0, 8)
+  }, [proximos14Dias])
+
   // ── Por responsable ──
   const porResponsable = useMemo(() => {
     const mapa = new Map<string, { nombre: string; pendientes: number; vencidas: number; realizadas: number; canceladas: number; total: number }>()
@@ -601,42 +608,75 @@ export default function ProgramacionRondas() {
                 </Card>
                 </div>
 
-                <div className="w-full max-w-sm">
-                  <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Próximos 14 días</div>
-                  <Card>
-                    <CardContent className="space-y-1 p-3">
-                      {proximos14Dias.map((d) => {
-                        const total = d.items.length
-                        const realizadas = d.items.filter((p) => p.estado === 'realizada').length
-                        const canceladas = d.items.filter((p) => p.estado === 'cancelada').length
-                        const pendientes = total - realizadas - canceladas
-                        return (
-                          <button
-                            key={d.fecha}
-                            type="button"
-                            disabled={total === 0}
-                            onClick={() => total > 0 && setDiaSeleccionado({ fecha: d.fecha, items: d.items })}
-                            className={cn(
-                              'grid w-full grid-cols-[56px_1fr_24px] items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition-colors',
-                              total > 0 ? 'cursor-pointer hover:bg-accent' : 'cursor-default opacity-50'
-                            )}
-                          >
-                            <span className="font-medium capitalize">{d.label}</span>
-                            <span className="relative block h-2.5 w-full overflow-hidden rounded-full bg-[var(--neutro-suave)]">
-                              {total > 0 && (
-                                <span className="absolute inset-y-0 left-0 flex overflow-hidden rounded-full" style={{ width: `${(total / maxProximos) * 100}%` }}>
-                                  {pendientes > 0 && <span className="h-full" style={{ width: `${(pendientes / total) * 100}%`, backgroundColor: 'var(--advertencia)' }} />}
-                                  {realizadas > 0 && <span className="h-full" style={{ width: `${(realizadas / total) * 100}%`, backgroundColor: 'var(--exito)' }} />}
-                                  {canceladas > 0 && <span className="h-full" style={{ width: `${(canceladas / total) * 100}%`, backgroundColor: 'var(--neutro)' }} />}
-                                </span>
+                <div className="flex w-full flex-wrap gap-4">
+                  <div className="w-full sm:w-64">
+                    <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Próximos 14 días</div>
+                    <Card>
+                      <CardContent className="space-y-1 p-3">
+                        {proximos14Dias.map((d) => {
+                          const total = d.items.length
+                          const realizadas = d.items.filter((p) => p.estado === 'realizada').length
+                          const canceladas = d.items.filter((p) => p.estado === 'cancelada').length
+                          const pendientes = total - realizadas - canceladas
+                          return (
+                            <button
+                              key={d.fecha}
+                              type="button"
+                              disabled={total === 0}
+                              onClick={() => total > 0 && setDiaSeleccionado({ fecha: d.fecha, items: d.items })}
+                              className={cn(
+                                'grid w-full grid-cols-[56px_1fr_24px] items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition-colors',
+                                total > 0 ? 'cursor-pointer hover:bg-accent' : 'cursor-default opacity-50'
                               )}
-                            </span>
-                            <span className="text-right font-semibold text-muted-foreground">{total || '—'}</span>
-                          </button>
-                        )
-                      })}
-                    </CardContent>
-                  </Card>
+                            >
+                              <span className="font-medium capitalize">{d.label}</span>
+                              <span className="relative block h-2.5 w-full overflow-hidden rounded-full bg-[var(--neutro-suave)]">
+                                {total > 0 && (
+                                  <span className="absolute inset-y-0 left-0 flex overflow-hidden rounded-full" style={{ width: `${(total / maxProximos) * 100}%` }}>
+                                    {pendientes > 0 && <span className="h-full" style={{ width: `${(pendientes / total) * 100}%`, backgroundColor: 'var(--advertencia)' }} />}
+                                    {realizadas > 0 && <span className="h-full" style={{ width: `${(realizadas / total) * 100}%`, backgroundColor: 'var(--exito)' }} />}
+                                    {canceladas > 0 && <span className="h-full" style={{ width: `${(canceladas / total) * 100}%`, backgroundColor: 'var(--neutro)' }} />}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-right font-semibold text-muted-foreground">{total || '—'}</span>
+                            </button>
+                          )
+                        })}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Agenda</div>
+                    <Card>
+                      <CardContent className="space-y-1.5 p-3">
+                        {agendaProxima.length === 0 ? (
+                          <div className="py-6 text-center text-sm text-muted-foreground">Sin rondas programadas en los próximos 14 días.</div>
+                        ) : (
+                          agendaProxima.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => setDiaSeleccionado({ fecha: p.fecha_programada, items: proximos14Dias.find((d) => d.fecha === p.fecha_programada)?.items ?? [p] })}
+                              className="flex w-full items-center gap-2.5 rounded-lg border-l-4 bg-card p-2 text-left text-xs shadow-relieve-sm transition-colors hover:bg-accent"
+                              style={{ borderLeftColor: colorCategoriaItem(p) }}
+                            >
+                              <span className="w-14 shrink-0 font-semibold capitalize text-muted-foreground">{p._diaLabel}</span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-medium">{p.tipos_inspeccion?.nombre ?? '—'}</span>
+                                <span className="block truncate text-muted-foreground">
+                                  {p.empresa ?? 'Sin empresa'}
+                                  {p.responsable ? ` · ${p.responsable.nombre_completo}` : ''}
+                                </span>
+                              </span>
+                              <EstadoBadge p={p} />
+                            </button>
+                          ))
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </div>
             </TabsContent>
