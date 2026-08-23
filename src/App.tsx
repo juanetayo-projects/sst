@@ -41,7 +41,7 @@ export default function App() {
             <Route
               path="inspecciones"
               element={
-                <ProtectedRoute modulo="inspecciones">
+                <ProtectedRoute modulo="historial">
                   <Historial />
                 </ProtectedRoute>
               }
@@ -113,7 +113,7 @@ export default function App() {
             <Route
               path="inspecciones/nueva"
               element={
-                <ProtectedRoute modulo="inspecciones">
+                <ProtectedRoute modulo="nueva-inspeccion">
                   <SeleccionarTipoInspeccion />
                 </ProtectedRoute>
               }
@@ -121,7 +121,7 @@ export default function App() {
             <Route
               path="inspecciones/nueva/:codigo"
               element={
-                <ProtectedRoute modulo="inspecciones">
+                <ProtectedRoute modulo="nueva-inspeccion">
                   <FormularioInspeccion />
                 </ProtectedRoute>
               }
@@ -129,7 +129,7 @@ export default function App() {
             <Route
               path="inspecciones/:id/editar"
               element={
-                <ProtectedRoute modulo="inspecciones">
+                <ProtectedRoute modulo="historial">
                   <FormularioInspeccion />
                 </ProtectedRoute>
               }
@@ -137,7 +137,7 @@ export default function App() {
             <Route
               path="inspecciones/:id"
               element={
-                <ProtectedRoute modulo="inspecciones">
+                <ProtectedRoute modulo="historial">
                   <DetalleInspeccion />
                 </ProtectedRoute>
               }

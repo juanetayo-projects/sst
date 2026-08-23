@@ -23,8 +23,8 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true, modulo: null as string | null },
-  { to: '/inspecciones/nueva', label: 'Nueva Inspección', icon: ClipboardPlus, end: false, modulo: 'inspecciones' },
-  { to: '/inspecciones', label: 'Historial', icon: History, end: true, modulo: 'inspecciones' },
+  { to: '/inspecciones/nueva', label: 'Nueva Inspección', icon: ClipboardPlus, end: false, modulo: 'nueva-inspeccion' },
+  { to: '/inspecciones', label: 'Historial', icon: History, end: true, modulo: 'historial' },
   { to: '/programacion', label: 'Programación', icon: CalendarClock, end: false, modulo: 'programacion' },
   { to: '/vencimientos', label: 'Vencimientos', icon: Flame, end: true, modulo: 'vencimientos' },
   { to: '/inventario', label: 'Inventario', icon: Archive, end: true, modulo: 'inventario' },

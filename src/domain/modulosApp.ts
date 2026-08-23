@@ -1,5 +1,6 @@
 import {
   ClipboardPlus,
+  History,
   CalendarClock,
   Flame,
   Archive,
@@ -24,7 +25,8 @@ export type ModuloApp = {
  * aquí también para que sea asignable.
  */
 export const MODULOS_APP: ModuloApp[] = [
-  { id: 'inspecciones', nombre: 'Nueva inspección / Historial', icono: ClipboardPlus },
+  { id: 'nueva-inspeccion', nombre: 'Nueva Inspección', icono: ClipboardPlus },
+  { id: 'historial', nombre: 'Historial', icono: History },
   { id: 'programacion', nombre: 'Programación', icono: CalendarClock },
   { id: 'vencimientos', nombre: 'Vencimientos', icono: Flame },
   { id: 'inventario', nombre: 'Inventario', icono: Archive },
