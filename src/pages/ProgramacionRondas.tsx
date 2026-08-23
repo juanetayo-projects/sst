@@ -515,7 +515,7 @@ export default function ProgramacionRondas() {
         ) : (
           <>
             <TabsContent value="calendario">
-              <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[auto_1fr]">
                 <div className="mx-auto w-full max-w-md">
                 <Card className="overflow-hidden">
                   <div className="franja-institucional flex items-center justify-between px-3 py-2">
@@ -601,7 +601,7 @@ export default function ProgramacionRondas() {
                 </Card>
                 </div>
 
-                <div>
+                <div className="w-full max-w-2xl">
                   <div className="mb-2 text-sm font-semibold text-[var(--cac-azul)]">Próximos 14 días</div>
                   <Card>
                     <CardContent className="space-y-1 p-3">

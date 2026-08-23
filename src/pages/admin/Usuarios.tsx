@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Plus, KeyRound, Trash2, ShieldCheck } from 'lucide-react'
+import { Plus, KeyRound, Trash2, ShieldCheck, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { PageHeader } from '@/components/ui'
@@ -23,6 +23,23 @@ type Perfil = {
   nombre_completo: string
   role: 'admin' | 'inspector' | 'encuestador'
   activo: boolean
+}
+
+/**
+ * `supabase.functions.invoke` deja en `error.message` el texto genérico "Edge Function returned a
+ * non-2xx status code" — el mensaje real que la función sí envía va en el cuerpo de `error.context`.
+ */
+async function mensajeErrorEdge(error: unknown): Promise<string> {
+  const err = error as { message?: string; context?: Response }
+  if (err?.context) {
+    try {
+      const body = await err.context.clone().json()
+      if (body?.error) return body.error as string
+    } catch {
+      // sin cuerpo JSON legible — se usa el mensaje genérico de abajo
+    }
+  }
+  return err?.message ?? 'Error desconocido'
 }
 
 export default function Usuarios() {
@@ -79,7 +96,7 @@ export default function Usuarios() {
     })
     setCreando(false)
     if (error) {
-      setMensaje({ tipo: 'error', titulo: 'No se pudo crear el usuario', texto: error.message })
+      setMensaje({ tipo: 'error', titulo: 'No se pudo crear el usuario', texto: await mensajeErrorEdge(error) })
       return
     }
     setModalNuevo(false)
@@ -116,7 +133,7 @@ export default function Usuarios() {
     })
     setGuardandoReset(false)
     if (error) {
-      setMensaje({ tipo: 'error', titulo: 'No se pudo restablecer', texto: error.message })
+      setMensaje({ tipo: 'error', titulo: 'No se pudo restablecer', texto: await mensajeErrorEdge(error) })
       return
     }
     setReseteando(null)
@@ -134,13 +151,14 @@ export default function Usuarios() {
     setEliminando(false)
     setAEliminar(null)
     if (error) {
-      const esFK = error.message?.toLowerCase().includes('foreign key')
+      const detalle = await mensajeErrorEdge(error)
+      const esFK = detalle.toLowerCase().includes('foreign key')
       setMensaje({
         tipo: 'error',
         titulo: 'No se pudo eliminar',
         texto: esFK
           ? 'Este usuario tiene inspecciones registradas y no puede eliminarse. Desactívalo en su lugar.'
-          : error.message,
+          : detalle,
       })
       return
     }
@@ -273,10 +291,11 @@ export default function Usuarios() {
       <Dialog open={modalNuevo} onOpenChange={setModalNuevo}>
         <DialogContent className="max-w-sm">
           <form onSubmit={crearUsuario}>
-            <DialogHeader>
-              <DialogTitle>Nuevo usuario</DialogTitle>
+            <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+              <UserPlus className="size-5 text-white" />
+              <DialogTitle className="text-white">Nuevo usuario</DialogTitle>
             </DialogHeader>
-            <div className="mt-4 space-y-3">
+            <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="nuevo-nombre">Nombre completo</Label>
                 <Input id="nuevo-nombre" required value={nombreCompleto} onChange={(e) => setNombreCompleto(e.target.value)} />
@@ -353,10 +372,11 @@ export default function Usuarios() {
       >
         <DialogContent className="max-w-sm">
           <form onSubmit={resetearPassword}>
-            <DialogHeader>
-              <DialogTitle>Restablecer contraseña</DialogTitle>
+            <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+              <KeyRound className="size-5 text-white" />
+              <DialogTitle className="text-white">Restablecer contraseña</DialogTitle>
             </DialogHeader>
-            <p className="mt-1 text-sm text-muted-foreground">{reseteando?.nombre_completo}</p>
+            <p className="text-sm text-muted-foreground">{reseteando?.nombre_completo}</p>
             <div className="mt-4 space-y-1.5">
               <Label htmlFor="password-reset">Nueva contraseña</Label>
               <Input
@@ -412,10 +432,11 @@ export default function Usuarios() {
 
       <Dialog open={permisosDe !== null} onOpenChange={(v) => !v && setPermisosDe(null)}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Permisos por ronda</DialogTitle>
+          <DialogHeader className="franja-institucional -m-6 mb-4 flex-row items-center gap-2 space-y-0 rounded-t-xl p-4">
+            <ShieldCheck className="size-5 text-white" />
+            <DialogTitle className="text-white">Permisos por ronda</DialogTitle>
           </DialogHeader>
-          <p className="mt-1 text-sm text-muted-foreground">{permisosDe?.nombre_completo}</p>
+          <p className="text-sm text-muted-foreground">{permisosDe?.nombre_completo}</p>
           {cargandoPermisos ? (
             <div className="py-6 text-center text-sm text-muted-foreground">Cargando…</div>
           ) : (

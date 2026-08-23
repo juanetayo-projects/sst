@@ -45,7 +45,11 @@ Deno.serve(async (req: Request) => {
     const { error: perfilError } = await admin
       .from('profiles')
       .insert({ id: data.user.id, email, nombre_completo, role: role ?? 'inspector' })
-    if (perfilError) return json(400, { error: perfilError.message })
+    if (perfilError) {
+      // Sin esto, un usuario de auth.users queda huerfano (sin perfil) y bloquea el correo para siempre.
+      await admin.auth.admin.deleteUser(data.user.id)
+      return json(400, { error: perfilError.message })
+    }
     return json(200, { ok: true, id: data.user.id })
   }
 
