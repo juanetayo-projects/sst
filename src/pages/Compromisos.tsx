@@ -27,6 +27,7 @@ type Compromiso = {
   fecha_compromiso: string
   estado: 'pendiente' | 'cumplido'
   exportado_acta: boolean
+  empresa: string | null
   inspeccion_id: string
   inspecciones: { empresa: string | null; sede: string | null; tipo_inspeccion_id: string; tipos_inspeccion: { nombre: string } | null } | null
 }
@@ -40,7 +41,14 @@ const TEMA_VACIO: TemaForm = { tema: '', tiempo: '' }
 
 const TODOS = '__todos__'
 const hoyISO = new Date().toISOString().slice(0, 10)
-const FORM_VACIO = { inspeccion_id: '', descripcion: '', responsable: '', fecha_compromiso: hoyISO, estado: 'pendiente' as Compromiso['estado'] }
+const FORM_VACIO = {
+  inspeccion_id: '',
+  descripcion: '',
+  responsable: '',
+  fecha_compromiso: hoyISO,
+  estado: 'pendiente' as Compromiso['estado'],
+  empresa: '',
+}
 
 function esVencido(c: Compromiso) {
   return c.estado === 'pendiente' && c.fecha_compromiso < hoyISO
@@ -67,6 +75,7 @@ export default function Compromisos() {
   const [hasta, setHasta] = useState('')
 
   const [inspeccionesOpciones, setInspeccionesOpciones] = useState<InspeccionOpcion[]>([])
+  const [empresas, setEmpresas] = useState<string[]>([])
   const [modalAbierto, setModalAbierto] = useState(false)
   const [editando, setEditando] = useState<Compromiso | null>(null)
   const [form, setForm] = useState(FORM_VACIO)
@@ -89,13 +98,14 @@ export default function Compromisos() {
       .order('fecha_inspeccion', { ascending: false })
       .limit(100)
       .then(({ data }) => setInspeccionesOpciones((data ?? []) as unknown as InspeccionOpcion[]))
+    supabase.from('empresas').select('nombre').eq('activo', true).order('orden').then(({ data }) => setEmpresas((data ?? []).map((e) => e.nombre)))
   }, [])
 
   function cargar() {
     setCargando(true)
     let q = supabase
       .from('compromisos_ronda')
-      .select('id,descripcion,responsable,fecha_compromiso,estado,exportado_acta,inspeccion_id,inspecciones(empresa,sede,tipo_inspeccion_id,tipos_inspeccion(nombre))')
+      .select('id,descripcion,responsable,fecha_compromiso,estado,exportado_acta,empresa,inspeccion_id,inspecciones(empresa,sede,tipo_inspeccion_id,tipos_inspeccion(nombre))')
       .order('fecha_compromiso', { ascending: true })
     if (desde) q = q.gte('fecha_compromiso', desde)
     if (hasta) q = q.lte('fecha_compromiso', hasta)
@@ -137,6 +147,7 @@ export default function Compromisos() {
       responsable: c.responsable ?? '',
       fecha_compromiso: c.fecha_compromiso,
       estado: c.estado,
+      empresa: c.empresa ?? '',
     })
     setModalAbierto(true)
   }
@@ -150,6 +161,7 @@ export default function Compromisos() {
       responsable: form.responsable || null,
       fecha_compromiso: form.fecha_compromiso,
       estado: form.estado,
+      empresa: form.empresa || null,
       ...(form.estado === 'cumplido' ? { fecha_cumplido: new Date().toISOString().slice(0, 10) } : {}),
     }
     const { error } = editando
@@ -341,7 +353,7 @@ export default function Compromisos() {
                     </Link>
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">
-                    {c.inspecciones?.empresa ?? '—'} {c.inspecciones?.sede ? `· ${c.inspecciones.sede}` : ''}
+                    {c.empresa ?? c.inspecciones?.empresa ?? '—'} {c.inspecciones?.sede ? `· ${c.inspecciones.sede}` : ''}
                   </td>
                   <td className="px-3 py-2">{c.descripcion}</td>
                   <td className="px-3 py-2 text-muted-foreground">{c.responsable ?? '—'}</td>
@@ -420,6 +432,21 @@ export default function Compromisos() {
               <div className="space-y-1.5">
                 <Label htmlFor="comp-fecha">Fecha compromiso</Label>
                 <Input id="comp-fecha" type="date" required value={form.fecha_compromiso} onChange={(e) => setForm((f) => ({ ...f, fecha_compromiso: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Empresa</Label>
+                <Select value={form.empresa} onValueChange={(v) => setForm((f) => ({ ...f, empresa: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {empresas.map((e) => (
+                      <SelectItem key={e} value={e}>
+                        {e}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="comp-estado">Estado</Label>

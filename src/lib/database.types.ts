@@ -84,6 +84,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           descripcion: string
+          empresa: string | null
           estado: string
           exportado_acta: boolean
           fecha_compromiso: string
@@ -96,6 +97,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           descripcion: string
+          empresa?: string | null
           estado?: string
           exportado_acta?: boolean
           fecha_compromiso: string
@@ -108,6 +110,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           descripcion?: string
+          empresa?: string | null
           estado?: string
           exportado_acta?: boolean
           fecha_compromiso?: string
@@ -561,6 +564,7 @@ export type Database = {
           cantidad: number
           created_at: string
           created_by: string | null
+          empresa: string | null
           estado: string
           fecha: string
           id: string
@@ -573,6 +577,7 @@ export type Database = {
           cantidad?: number
           created_at?: string
           created_by?: string | null
+          empresa?: string | null
           estado?: string
           fecha?: string
           id?: string
@@ -585,6 +590,7 @@ export type Database = {
           cantidad?: number
           created_at?: string
           created_by?: string | null
+          empresa?: string | null
           estado?: string
           fecha?: string
           id?: string

@@ -25,6 +25,7 @@ type Solicitud = {
   tipo_elemento: string
   cantidad: number
   unidad_medida: string | null
+  empresa: string | null
   observacion: string | null
   estado: 'pendiente' | 'solicitado' | 'recibido'
   inspeccion_id: string
@@ -37,7 +38,16 @@ const TODOS = '__todos__'
 const TONO_ESTADO = { pendiente: 'advertencia', solicitado: 'info', recibido: 'exito' } as const
 const ETIQUETA_ESTADO = { pendiente: 'Pendiente', solicitado: 'Solicitado', recibido: 'Recibido' } as const
 
-const FORM_VACIO = { inspeccion_id: '', fecha: new Date().toISOString().slice(0, 10), tipo_elemento: '', cantidad: '1', unidad_medida: '', observacion: '', estado: 'pendiente' as Solicitud['estado'] }
+const FORM_VACIO = {
+  inspeccion_id: '',
+  fecha: new Date().toISOString().slice(0, 10),
+  tipo_elemento: '',
+  cantidad: '1',
+  unidad_medida: '',
+  empresa: '',
+  observacion: '',
+  estado: 'pendiente' as Solicitud['estado'],
+}
 
 export default function SolicitudesCompra() {
   const { session, perfil } = useAuth()
@@ -57,6 +67,8 @@ export default function SolicitudesCompra() {
   const [generando, setGenerando] = useState(false)
 
   const [inspeccionesOpciones, setInspeccionesOpciones] = useState<InspeccionOpcion[]>([])
+  const [empresas, setEmpresas] = useState<string[]>([])
+  const [unidades, setUnidades] = useState<string[]>([])
   const [modalAbierto, setModalAbierto] = useState(false)
   const [editando, setEditando] = useState<Solicitud | null>(null)
   const [form, setForm] = useState(FORM_VACIO)
@@ -72,13 +84,15 @@ export default function SolicitudesCompra() {
       .order('fecha_inspeccion', { ascending: false })
       .limit(100)
       .then(({ data }) => setInspeccionesOpciones((data ?? []) as unknown as InspeccionOpcion[]))
+    supabase.from('empresas').select('nombre').eq('activo', true).order('orden').then(({ data }) => setEmpresas((data ?? []).map((e) => e.nombre)))
+    supabase.from('unidades_medida').select('nombre').eq('activo', true).order('orden').then(({ data }) => setUnidades((data ?? []).map((u) => u.nombre)))
   }, [])
 
   function cargar() {
     setCargando(true)
     let q = supabase
       .from('solicitudes_compra_item')
-      .select('id,fecha,tipo_elemento,cantidad,unidad_medida,observacion,estado,inspeccion_id,inspecciones(empresa,sede,tipo_inspeccion_id,tipos_inspeccion(nombre))')
+      .select('id,fecha,tipo_elemento,cantidad,unidad_medida,empresa,observacion,estado,inspeccion_id,inspecciones(empresa,sede,tipo_inspeccion_id,tipos_inspeccion(nombre))')
       .order('fecha', { ascending: false })
     if (estadoFiltro !== TODOS) q = q.eq('estado', estadoFiltro)
     if (desde) q = q.gte('fecha', desde)
@@ -120,7 +134,7 @@ export default function SolicitudesCompra() {
         cantidad: f.cantidad,
         unidad_medida: f.unidad_medida,
         observacion: f.observacion,
-        empresa: f.inspecciones?.empresa ?? null,
+        empresa: f.empresa ?? f.inspecciones?.empresa ?? null,
         sede: f.inspecciones?.sede ?? null,
       })),
     })
@@ -162,6 +176,7 @@ export default function SolicitudesCompra() {
       tipo_elemento: f.tipo_elemento,
       cantidad: String(f.cantidad),
       unidad_medida: f.unidad_medida ?? '',
+      empresa: f.empresa ?? '',
       observacion: f.observacion ?? '',
       estado: f.estado,
     })
@@ -177,6 +192,7 @@ export default function SolicitudesCompra() {
       tipo_elemento: form.tipo_elemento,
       cantidad: Number(form.cantidad) || 1,
       unidad_medida: form.unidad_medida || null,
+      empresa: form.empresa || null,
       observacion: form.observacion || null,
       estado: form.estado,
     }
@@ -320,7 +336,7 @@ export default function SolicitudesCompra() {
                     </Link>
                   </td>
                   <td className="px-3 py-1.5 text-muted-foreground">
-                    {f.inspecciones?.empresa ?? '—'} {f.inspecciones?.sede ? `· ${f.inspecciones.sede}` : ''}
+                    {f.empresa ?? f.inspecciones?.empresa ?? '—'} {f.inspecciones?.sede ? `· ${f.inspecciones.sede}` : ''}
                   </td>
                   <td className="px-3 py-1.5">{f.tipo_elemento}</td>
                   <td className="px-3 py-1.5 text-right tabular">{f.cantidad}</td>
@@ -390,6 +406,21 @@ export default function SolicitudesCompra() {
                 <Input id="sol-fecha" type="date" required value={form.fecha} onChange={(e) => setForm((f) => ({ ...f, fecha: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
+                <Label>Empresa</Label>
+                <Select value={form.empresa} onValueChange={(v) => setForm((f) => ({ ...f, empresa: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {empresas.map((e) => (
+                      <SelectItem key={e} value={e}>
+                        {e}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="sol-estado">Estado</Label>
                 <Select value={form.estado} onValueChange={(v) => setForm((f) => ({ ...f, estado: v as Solicitud['estado'] }))}>
                   <SelectTrigger>
@@ -411,8 +442,19 @@ export default function SolicitudesCompra() {
                 <Input id="sol-cantidad" type="number" min="0" step="any" required value={form.cantidad} onChange={(e) => setForm((f) => ({ ...f, cantidad: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="sol-um">Unidad de medida</Label>
-                <Input id="sol-um" value={form.unidad_medida} onChange={(e) => setForm((f) => ({ ...f, unidad_medida: e.target.value }))} />
+                <Label>Unidad de medida</Label>
+                <Select value={form.unidad_medida} onValueChange={(v) => setForm((f) => ({ ...f, unidad_medida: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="UM" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unidades.map((u) => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="sol-obs">Observación</Label>

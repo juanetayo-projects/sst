@@ -15,7 +15,7 @@ import {
 } from '@/lib/botiquines'
 import { IconoElementoBotiquin } from '@/components/inventario/IconoElementoBotiquin'
 import { CampoListaOtra } from '@/components/inventario/CampoListaOtra'
-import { PageHeader, FilterBar, MetricCard } from '@/components/ui'
+import { PageHeader, MetricCard } from '@/components/ui'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -801,8 +801,13 @@ function SeccionBotiquines({
         falta o estén vencidos — quedan visibles aquí como pendientes de reponer, para reportarlos a Compras.
       </p>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <FilterBar className="mb-0 flex-1">
+      <Tabs defaultValue="listado">
+        <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-3 shadow-relieve-sm">
+          <TabsList>
+            <TabsTrigger value="listado">Listado</TabsTrigger>
+            <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
+          </TabsList>
+          <div className="mx-1 hidden h-8 w-px self-end bg-border sm:block" />
           <div className="space-y-1.5">
             <Label className="text-xs">Buscar</Label>
             <Input placeholder="Código, sede, ubicación…" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="h-8 w-44 text-xs" />
@@ -838,99 +843,103 @@ function SeccionBotiquines({
               </SelectContent>
             </Select>
           </div>
-        </FilterBar>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={filtrados.length === 0} onClick={exportar}>
-            <FileSpreadsheet />
-            Exportar Excel
-          </Button>
-          {puedeEscribir && (
-            <Button size="sm" onClick={abrirNuevo}>
-              <Plus />
-              Nuevo botiquín
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" size="sm" disabled={filtrados.length === 0} onClick={exportar}>
+              <FileSpreadsheet />
+              Exportar Excel
             </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetricCard titulo="Total botiquines" valor={estadisticas.total} icono={Syringe} color="azul" />
-        <MetricCard titulo="Completos" valor={estadisticas.completos} icono={Syringe} color="verde" />
-        <MetricCard titulo="Con faltantes" valor={estadisticas.conFaltantes} icono={Syringe} color="ambar" />
-        <MetricCard titulo="Vencidos" valor={estadisticas.vencidos} icono={Syringe} color="rojo" />
-      </div>
-
-      <Card className="overflow-x-auto">
-        {cargando ? (
-          <div className="p-4">
-            <SkeletonTabla filas={6} columnas={8} />
+            {puedeEscribir && (
+              <Button size="sm" onClick={abrirNuevo}>
+                <Plus />
+                Nuevo botiquín
+              </Button>
+            )}
           </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="franja-institucional text-left text-xs text-white">
-                <th className="px-3 py-1.5 font-semibold">Código</th>
-                <th className="px-3 py-1.5 font-semibold">Sede</th>
-                <th className="px-3 py-1.5 font-semibold">Ubicación</th>
-                <th className="px-3 py-1.5 font-semibold">Tipo</th>
-                <th className="px-3 py-1.5 font-semibold">Vencimiento</th>
-                <th className="px-3 py-1.5 font-semibold">Contenido</th>
-                <th className="px-3 py-1.5 font-semibold">Estado</th>
-                <th className="px-3 py-1.5 font-semibold">Activo</th>
-                {puedeEscribir && <th className="px-3 py-1.5 font-semibold"></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((item, i) => {
-                const venc = estadoVencimiento(item.fecha_vencimiento)
-                const atributos = leerAtributosBotiquin(item.atributos)
-                const faltan = atributos.elementos_faltantes.length
-                return (
-                  <tr key={item.id} className="border-b border-border/60 last:border-0" style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}>
-                    <td className="px-3 py-1.5 font-medium">{item.codigo}</td>
-                    <td className="px-3 py-1.5 text-muted-foreground">{item.sede ?? '—'}</td>
-                    <td className="px-3 py-1.5 text-muted-foreground">{item.ubicacion ?? '—'}</td>
-                    <td className="px-3 py-1.5">{ETIQUETA_TIPO_BOTIQUIN[atributos.tipo_botiquin]}</td>
-                    <td className="px-3 py-1.5">{item.fecha_vencimiento ?? '—'}</td>
-                    <td className="px-3 py-1.5">
-                      <button className="cursor-pointer" onClick={() => setVerContenido(item)}>
-                        <Badge tono={faltan > 0 ? 'advertencia' : 'exito'}>{faltan > 0 ? `${faltan} faltante${faltan > 1 ? 's' : ''}` : 'Completo'}</Badge>
-                      </button>
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <Badge tono={TONO_VENCIMIENTO[venc]}>{ETIQUETA_VENCIMIENTO[venc]}</Badge>
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <button onClick={() => puedeEscribir && alternarActivo(item)} disabled={!puedeEscribir} className="disabled:cursor-not-allowed">
-                        <Badge tono={item.activo ? 'exito' : 'neutro'}>{item.activo ? 'Activo' : 'Inactivo'}</Badge>
-                      </button>
-                    </td>
-                    {puedeEscribir && (
-                      <td className="px-3 py-1.5">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => abrirEditar(item)}>
-                            <Pencil className="size-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setAEliminar(item)}>
-                            <Trash2 className="size-3.5 text-[var(--error)]" />
-                          </Button>
-                        </div>
-                      </td>
-                    )}
+        </div>
+
+        <TabsContent value="listado">
+          <Card className="overflow-x-auto">
+            {cargando ? (
+              <div className="p-4">
+                <SkeletonTabla filas={6} columnas={8} />
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="franja-institucional text-left text-xs text-white">
+                    <th className="px-3 py-1.5 font-semibold">Código</th>
+                    <th className="px-3 py-1.5 font-semibold">Sede</th>
+                    <th className="px-3 py-1.5 font-semibold">Ubicación</th>
+                    <th className="px-3 py-1.5 font-semibold">Tipo</th>
+                    <th className="px-3 py-1.5 font-semibold">Vencimiento</th>
+                    <th className="px-3 py-1.5 font-semibold">Contenido</th>
+                    <th className="px-3 py-1.5 font-semibold">Estado</th>
+                    <th className="px-3 py-1.5 font-semibold">Activo</th>
+                    {puedeEscribir && <th className="px-3 py-1.5 font-semibold"></th>}
                   </tr>
-                )
-              })}
-              {filtrados.length === 0 && (
-                <tr>
-                  <td colSpan={puedeEscribir ? 9 : 8} className="px-3 py-6 text-center text-muted-foreground">
-                    Sin registros con estos filtros.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-      </Card>
+                </thead>
+                <tbody>
+                  {filtrados.map((item, i) => {
+                    const venc = estadoVencimiento(item.fecha_vencimiento)
+                    const atributos = leerAtributosBotiquin(item.atributos)
+                    const faltan = atributos.elementos_faltantes.length
+                    return (
+                      <tr key={item.id} className="border-b border-border/60 last:border-0" style={{ backgroundColor: i % 2 ? 'var(--fila-impar)' : 'var(--fila-par)' }}>
+                        <td className="px-3 py-1.5 font-medium">{item.codigo}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{item.sede ?? '—'}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{item.ubicacion ?? '—'}</td>
+                        <td className="px-3 py-1.5">{ETIQUETA_TIPO_BOTIQUIN[atributos.tipo_botiquin]}</td>
+                        <td className="px-3 py-1.5">{item.fecha_vencimiento ?? '—'}</td>
+                        <td className="px-3 py-1.5">
+                          <button className="cursor-pointer" onClick={() => setVerContenido(item)}>
+                            <Badge tono={faltan > 0 ? 'advertencia' : 'exito'}>{faltan > 0 ? `${faltan} faltante${faltan > 1 ? 's' : ''}` : 'Completo'}</Badge>
+                          </button>
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <Badge tono={TONO_VENCIMIENTO[venc]}>{ETIQUETA_VENCIMIENTO[venc]}</Badge>
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <button onClick={() => puedeEscribir && alternarActivo(item)} disabled={!puedeEscribir} className="disabled:cursor-not-allowed">
+                            <Badge tono={item.activo ? 'exito' : 'neutro'}>{item.activo ? 'Activo' : 'Inactivo'}</Badge>
+                          </button>
+                        </td>
+                        {puedeEscribir && (
+                          <td className="px-3 py-1.5">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => abrirEditar(item)}>
+                                <Pencil className="size-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => setAEliminar(item)}>
+                                <Trash2 className="size-3.5 text-[var(--error)]" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
+                  {filtrados.length === 0 && (
+                    <tr>
+                      <td colSpan={puedeEscribir ? 9 : 8} className="px-3 py-6 text-center text-muted-foreground">
+                        Sin registros con estos filtros.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="estadisticas">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetricCard titulo="Total botiquines" valor={estadisticas.total} icono={Syringe} color="azul" />
+            <MetricCard titulo="Completos" valor={estadisticas.completos} icono={Syringe} color="verde" />
+            <MetricCard titulo="Con faltantes" valor={estadisticas.conFaltantes} icono={Syringe} color="ambar" />
+            <MetricCard titulo="Vencidos" valor={estadisticas.vencidos} icono={Syringe} color="rojo" />
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <button
         type="button"
